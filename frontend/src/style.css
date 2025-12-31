@@ -1,0 +1,9 @@
+/* Add this to your main CSS or App.vue */
+body, html {
+  overflow-x: hidden; /* Prevents the horizontal scrollbar */
+  width: 100%;
+}
+
+#app {
+  overflow-x: hidden;
+}

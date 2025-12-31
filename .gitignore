@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+
+# Database
+*.db
+
+# Node.js
+node_modules/
