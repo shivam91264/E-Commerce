@@ -1,5 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+# from app.extensions import db
+
 
 db = SQLAlchemy()
 
@@ -7,29 +9,57 @@ db = SQLAlchemy()
 # 1. USER & AUTHENTICATION MODELS
 # ----------------------------------------------------------------------
 
+
 class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # Auth
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+
+    # Basic Profile
     first_name = db.Column(db.String(80), nullable=True)
     last_name = db.Column(db.String(80), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
-    
-    # Role Management: 0 = User, 1 = Admin
+
+    # 👇 NEW FIELDS
+    gender = db.Column(db.String(20), nullable=True)      # male / female / other / prefer_not_to_say
+    dob = db.Column(db.Date, nullable=True)               # Date of Birth
+
+    # Role & Status
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
-    
+
+    # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
 
     # Relationships
-    addresses = db.relationship('Address', back_populates='user', lazy=True, cascade="all, delete-orphan")
+    addresses = db.relationship(
+        'Address',
+        back_populates='user',
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
     orders = db.relationship('Order', back_populates='user', lazy=True)
-    cart_items = db.relationship('CartItem', back_populates='user', lazy=True, cascade="all, delete-orphan")
-    wishlist_items = db.relationship('Wishlist', back_populates='user', lazy=True, cascade="all, delete-orphan")
-    # REMOVED: comparison_items relationship
+    cart_items = db.relationship(
+        'CartItem',
+        back_populates='user',
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+    wishlist_items = db.relationship(
+        'Wishlist',
+        back_populates='user',
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
     reviews = db.relationship('Review', back_populates='user', lazy=True)
     messages = db.relationship('Message', back_populates='user', lazy=True)
 
@@ -40,25 +70,37 @@ class User(db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "phone": self.phone,
+            "gender": self.gender,
+            "dob": self.dob.isoformat() if self.dob else None,
             "is_admin": self.is_admin,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
+
+
 class Address(db.Model):
     __tablename__ = 'addresses'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    
-    label = db.Column(db.String(50), nullable=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    label = db.Column(db.String(50), nullable=True)          # Home / Office
     full_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)         # ✅ ADDED
+
     address_line1 = db.Column(db.String(200), nullable=False)
     address_line2 = db.Column(db.String(200), nullable=True)
     city = db.Column(db.String(100), nullable=False)
     state = db.Column(db.String(100), nullable=False)
     zip_code = db.Column(db.String(20), nullable=False)
     country = db.Column(db.String(100), nullable=False)
+
     is_default = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', back_populates='addresses')
@@ -66,9 +108,9 @@ class Address(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "user_id": self.user_id,
             "label": self.label,
             "full_name": self.full_name,
+            "phone": self.phone,                     # ✅ ADDED
             "address_line1": self.address_line1,
             "address_line2": self.address_line2,
             "city": self.city,
@@ -77,6 +119,7 @@ class Address(db.Model):
             "country": self.country,
             "is_default": self.is_default
         }
+
 
 # ----------------------------------------------------------------------
 # 2. PRODUCT CATALOG MODELS
@@ -344,9 +387,9 @@ class Message(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), nullable=False)
     subject = db.Column(db.String(200), nullable=True)
-    body = db.Column(db.Text, nullable=False)
+    message = db.Column(db.Text, nullable=False)  # <--- renamed from body
     
-    is_read = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(20), default="New")  # <--- added
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', back_populates='messages')
@@ -358,7 +401,7 @@ class Message(db.Model):
             "name": self.name,
             "email": self.email,
             "subject": self.subject,
-            "body": self.body,
-            "is_read": self.is_read,
+            "message": self.message,     # updated
+            "status": self.status,       # added
             "created_at": self.created_at.isoformat()
         }
