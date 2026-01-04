@@ -4,6 +4,9 @@ from app.config.config import Config
 # from app.extensions import db
 from app.extensions import cache
 
+from flask_cors import CORS
+
+
 from flask_jwt_extended import JWTManager
 
 app = Flask(__name__)
@@ -15,6 +18,10 @@ app.config["JWT_SECRET_KEY"] = "super_secret_key_123456789"  # change this in pr
 
 db.init_app(app)
 cache.init_app(app) 
+
+
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+
 
 @app.route('/')
 def home():

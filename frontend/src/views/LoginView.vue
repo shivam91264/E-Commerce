@@ -40,6 +40,10 @@
                 </p>
               </div>
 
+              <div v-if="error" class="alert alert-danger rounded-0 small py-2 mb-4 border-0" role="alert">
+                <i class="bi bi-exclamation-circle me-2"></i> {{ error }}
+              </div>
+
               <form @submit.prevent="handleLogin">
                 
                 <div class="mb-4">
@@ -49,7 +53,8 @@
                     id="email" 
                     class="form-control form-control-lg bg-light border-0 rounded-0 fs-6" 
                     placeholder="name@example.com"
-                    v-model="email"
+                    v-model="credentials.email"
+                    :disabled="loading"
                     required
                   >
                 </div>
@@ -65,7 +70,8 @@
                       id="password" 
                       class="form-control form-control-lg bg-light border-0 rounded-0 fs-6 pe-5" 
                       placeholder="••••••••"
-                      v-model="password"
+                      v-model="credentials.password"
+                      :disabled="loading"
                       required
                     >
                     <button 
@@ -83,8 +89,13 @@
                   <label class="form-check-label small text-muted cursor-pointer" for="rememberMe">Remember me</label>
                 </div>
 
-                <button type="submit" class="btn btn-dark w-100 py-3 rounded-0 text-uppercase fw-bold tracking-wide hover-lift mb-4">
-                  Log In
+                <button 
+                  type="submit" 
+                  class="btn btn-dark w-100 py-3 rounded-0 text-uppercase fw-bold tracking-wide hover-lift mb-4 d-flex align-items-center justify-content-center"
+                  :disabled="loading"
+                >
+                  <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  {{ loading ? 'Authenticating...' : 'Log In' }}
                 </button>
 
                 <div class="d-flex align-items-center mb-4">
@@ -135,44 +146,73 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import api from '@/services/api';
 import PremiumNavbar from '@/components/Navbar.vue';
 import PremiumFooter from '@/components/Footer.vue';
 
-export default {
-  name: "LoginView",
-  components: {
-    PremiumNavbar,
-    PremiumFooter
-  },
-  data() {
-    return {
-      email: "",
-      password: "",
-      rememberMe: false,
-      showPassword: false
-    };
-  },
-  methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
-      // this.$router.push({ name: page });
-    },
-    handleLogin() {
-      // Dummy Login Logic
-      if (this.email && this.password) {
-        console.log("Logging in...", { email: this.email, remember: this.rememberMe });
-        // Simulate API delay
-        setTimeout(() => {
-          alert(`Welcome back! Logged in as ${this.email}`);
-          this.handleNavigation('home');
-        }, 500);
+// Router instance for navigation
+const router = useRouter();
+
+// Form and UI state
+const credentials = reactive({
+  email: '',
+  password: ''
+});
+const rememberMe = ref(false);
+const showPassword = ref(false);
+const loading = ref(false);
+const error = ref(null);
+
+/**
+ * Handle page navigation
+ */
+const handleNavigation = (page) => {
+  router.push({ name: page });
+};
+
+/**
+ * Perform login API request
+ */
+const handleLogin = async () => {
+  error.value = null;
+  loading.value = true;
+
+  try {
+    const response = await api.post('/auth/login', {
+      email: credentials.email,
+      password: credentials.password
+    });
+
+    // Handle successful login
+    if (response.data && response.data.access_token) {
+      // Store JWT token
+      localStorage.setItem('access_token', response.data.access_token);
+      
+      // Store user info if provided by the backend
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       }
-    },
-    forgotPassword() {
-      alert("Redirecting to password recovery...");
+
+      // Redirect to home/dashboard
+      router.push({ name: 'home' });
     }
+  } catch (err) {
+    // Handle error responses from Flask
+    console.error('Login Error:', err);
+    error.value = err.response?.data?.message || 'Invalid email or password. Please try again.';
+  } finally {
+    loading.value = false;
   }
+};
+
+/**
+ * Trigger password recovery alert
+ */
+const forgotPassword = () => {
+  alert("Redirecting to password recovery...");
 };
 </script>
 
@@ -193,7 +233,7 @@ export default {
 /* Form Elements */
 .form-control:focus {
   background-color: #fff;
-  border: 1px solid #000 !important; /* Minimal focus ring */
+  border: 1px solid #000 !important;
   box-shadow: none;
 }
 

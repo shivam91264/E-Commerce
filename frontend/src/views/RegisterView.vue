@@ -40,6 +40,11 @@
                 </p>
               </div>
 
+              <div v-if="errorMessage" class="alert alert-danger d-flex align-items-center rounded-0 border-0 small mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>{{ errorMessage }}</div>
+              </div>
+
               <form @submit.prevent="handleRegister">
                 
                 <div class="mb-4">
@@ -49,7 +54,7 @@
                     id="fullname" 
                     class="form-control form-control-lg bg-light border-0 rounded-0 fs-6" 
                     placeholder="e.g. Alex Morgan"
-                    v-model="fullname"
+                    v-model="formData.full_name"
                     required
                   >
                 </div>
@@ -61,7 +66,19 @@
                     id="email" 
                     class="form-control form-control-lg bg-light border-0 rounded-0 fs-6" 
                     placeholder="name@example.com"
-                    v-model="email"
+                    v-model="formData.email"
+                    required
+                  >
+                </div>
+
+                <div class="mb-4">
+                  <label for="phone" class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    id="phone" 
+                    class="form-control form-control-lg bg-light border-0 rounded-0 fs-6" 
+                    placeholder="e.g. 9876543210"
+                    v-model="formData.phone"
                     required
                   >
                 </div>
@@ -75,7 +92,7 @@
                         id="password" 
                         class="form-control form-control-lg bg-light border-0 rounded-0 fs-6 pe-5" 
                         placeholder="Min. 8 chars"
-                        v-model="password"
+                        v-model="formData.password"
                         required
                         minlength="8"
                       >
@@ -89,7 +106,7 @@
                         id="confirmPassword" 
                         class="form-control form-control-lg bg-light border-0 rounded-0 fs-6 pe-5" 
                         placeholder="Repeat password"
-                        v-model="confirmPassword"
+                        v-model="formData.confirmPassword"
                         required
                       >
                       <button 
@@ -105,14 +122,19 @@
                 </div>
 
                 <div class="mb-4 form-check">
-                  <input type="checkbox" class="form-check-input border-secondary rounded-0 cursor-pointer" id="agreeTerms" v-model="agreeTerms" required>
+                  <input type="checkbox" class="form-check-input border-secondary rounded-0 cursor-pointer" id="agreeTerms" v-model="formData.agreeTerms" required>
                   <label class="form-check-label small text-muted cursor-pointer" for="agreeTerms">
                     I agree to the <a href="#" class="text-dark text-decoration-underline">Terms of Service</a> and <a href="#" class="text-dark text-decoration-underline">Privacy Policy</a>.
                   </label>
                 </div>
 
-                <button type="submit" class="btn btn-dark w-100 py-3 rounded-0 text-uppercase fw-bold tracking-wide hover-lift mb-4">
-                  Create Account
+                <button 
+                  type="submit" 
+                  class="btn btn-dark w-100 py-3 rounded-0 text-uppercase fw-bold tracking-wide hover-lift mb-4 d-flex align-items-center justify-content-center"
+                  :disabled="isLoading"
+                >
+                  <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  {{ isLoading ? 'Creating Account...' : 'Create Account' }}
                 </button>
 
                 <div class="d-flex align-items-center mb-4">
@@ -163,75 +185,101 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import api from '@/services/api';
 import PremiumNavbar from '@/components/Navbar.vue';
 import PremiumFooter from '@/components/Footer.vue';
 
-export default {
-  name: "RegisterView",
-  components: {
-    PremiumNavbar,
-    PremiumFooter
-  },
-  data() {
-    return {
-      fullname: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      showPassword: false,
-      agreeTerms: false
-    };
-  },
-  methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
-      // this.$router.push({ name: page });
-    },
-    handleRegister() {
-      // Basic UI Validation logic
-      if (this.password !== this.confirmPassword) {
-        alert("Passwords do not match.");
-        return;
-      }
+const router = useRouter();
+
+// Form States
+const formData = reactive({
+  full_name: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  agreeTerms: false
+});
+
+const showPassword = ref(false);
+const isLoading = ref(false);
+const errorMessage = ref('');
+
+// Logic
+const handleNavigation = (page) => {
+  router.push({ name: page });
+};
+
+const handleRegister = async () => {
+  // 1. Reset States
+  errorMessage.value = '';
+  
+  // 2. Client-side Validation
+  if (formData.password !== formData.confirmPassword) {
+    errorMessage.value = "Passwords do not match.";
+    return;
+  }
+
+  if (!formData.agreeTerms) {
+    errorMessage.value = "You must agree to the Terms of Service.";
+    return;
+  }
+
+  // 3. API Call
+  isLoading.ref = true;
+  try {
+    const response = await api.post('/auth/register', {
+      full_name: formData.full_name,
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone
+    });
+
+    // 4. Success Handling
+    // If your API returns a token immediately upon registration
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
       
-      if (this.agreeTerms) {
-        console.log("Registering...", { 
-          name: this.fullname, 
-          email: this.email 
-        });
-        
-        // Simulate API delay
-        setTimeout(() => {
-          alert(`Account created for ${this.fullname}! Please log in.`);
-          this.handleNavigation('login');
-        }, 500);
+      // Store user info if returned
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       }
+
+      // Redirect to Home/Dashboard
+      router.push({ name: 'Home' });
+    } else {
+      // If API requires separate login after registration
+      alert("Registration successful! Please log in.");
+      router.push({ name: 'login' });
     }
+    
+  } catch (error) {
+    // 5. Error Handling
+    console.error("Registration Error:", error);
+    errorMessage.value = error.response?.data?.message || "An error occurred during registration. Please try again.";
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
 
 <style scoped>
-/* PREMIUM VISUAL LANGUAGE 
-   Reusing the system defined in LoginView.vue for consistency.
-*/
+/* PREMIUM VISUAL LANGUAGE */
 
-/* Layout & Shadows */
 .shadow-2xl {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Typography */
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
 
-/* Form Elements */
-/* Using borderless inputs with light background for a modern feel */
 .form-control:focus {
   background-color: #fff;
-  border: 1px solid #000 !important; /* Minimal focus ring */
+  border: 1px solid #000 !important;
   box-shadow: none;
 }
 
@@ -242,7 +290,6 @@ export default {
 
 .cursor-pointer { cursor: pointer; }
 
-/* Animations & Interactions */
 .hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -251,11 +298,9 @@ export default {
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Responsive Adjustments */
 @media (min-width: 992px) {
   .p-md-6 { padding: 4rem; }
 }
 
-/* Image styling */
 .object-fit-cover { object-fit: cover; }
 </style>
