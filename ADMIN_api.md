@@ -261,3 +261,37 @@ PUT  http://127.0.0.1:5000/api/admin/orders/3/status
 
 # delete_order
 DELETE  http://127.0.0.1:5000/api/admin/orders/3
+
+
+
+
+
+###  ProductAttribute Table :--
+
+# ADD Attribute
+
+POST  http://127.0.0.1:5000/api/admin/products/1/attributes
+
+{
+  "key": "RAM",
+  "value": "16GB"
+}
+
+
+
+#  GET Attribute
+
+GET  http://127.0.0.1:5000/api/admin/products/1/attributes
+
+
+
+# UPDATE Attribute
+
+PUT  http://127.0.0.1:5000/api/admin/product-attributes/1
+
+
+
+#  DELETE Attribute
+
+DELETE  http://127.0.0.1:5000/api/admin/product-attributes/1
+

@@ -1030,3 +1030,114 @@ def category_dropdown():
         "msg": "Dropdown list",
         "data": [{"id": c.id, "name": c.name} for c in categories]
     }), 200
+
+
+
+
+#  ProductAttribute Table :--
+
+@admin_bp.route('/admin/products/<int:product_id>/attributes', methods=['POST'])
+@jwt_required()
+def add_product_attribute(product_id):
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({"msg": "Product not found"}), 404
+
+    data = request.get_json()
+    key = data.get("key")
+    value = data.get("value")
+
+    if not key or not value:
+        return jsonify({"msg": "key and value are required"}), 400
+
+    # Optional: prevent duplicate attribute keys
+    existing = ProductAttribute.query.filter_by(
+        product_id=product_id, key=key
+    ).first()
+    if existing:
+        return jsonify({"msg": "Attribute already exists"}), 400
+
+    attr = ProductAttribute(
+        product_id=product_id,
+        key=key,
+        value=value
+    )
+
+    db.session.add(attr)
+    db.session.commit()
+
+    return jsonify({
+        "msg": "Attribute added",
+        "data": attr.serialize()
+    }), 201
+
+
+
+
+@admin_bp.route('/admin/products/<int:product_id>/attributes', methods=['GET'])
+@jwt_required()
+def list_product_attributes(product_id):
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({"msg": "Product not found"}), 404
+
+    attributes = ProductAttribute.query.filter_by(product_id=product_id).all()
+
+    return jsonify({
+        "data": [a.serialize() for a in attributes]
+    }), 200
+
+
+
+
+
+@admin_bp.route('/admin/product-attributes/<int:id>', methods=['PUT'])
+@jwt_required()
+def update_product_attribute(id):
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    attr = ProductAttribute.query.get(id)
+    if not attr:
+        return jsonify({"msg": "Attribute not found"}), 404
+
+    data = request.get_json()
+    value = data.get("value")
+
+    if not value:
+        return jsonify({"msg": "value is required"}), 400
+
+    attr.value = value
+    db.session.commit()
+
+    return jsonify({
+        "msg": "Attribute updated",
+        "data": attr.serialize()
+    }), 200
+
+
+
+
+
+
+
+@admin_bp.route('/admin/product-attributes/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_product_attribute(id):
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    attr = ProductAttribute.query.get(id)
+    if not attr:
+        return jsonify({"msg": "Attribute not found"}), 404
+
+    db.session.delete(attr)
+    db.session.commit()
+
+    return jsonify({"msg": "Attribute deleted"}), 200
