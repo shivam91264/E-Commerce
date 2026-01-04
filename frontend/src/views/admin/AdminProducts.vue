@@ -1,29 +1,7 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-light-subtle">
     
-    <nav class="navbar navbar-expand-lg navbar-dark bg-black sticky-top py-3">
-      <div class="container px-lg-5">
-        <a class="navbar-brand fw-bold tracking-tight fs-4" href="#">
-          MARKETHUB <span class="text-secondary fw-normal fs-6 ps-2">| &nbsp;Admin</span>
-        </a>
-        
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="adminNav">
-          <ul class="navbar-nav ms-auto gap-lg-4 mb-2 mb-lg-0 align-items-lg-center">
-            <li class="nav-item"><a class="nav-link text-white-50 fw-medium" href="#" @click="$emit('navigate', 'admin-dashboard')">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link active fw-medium" href="#">Products</a></li>
-            <li class="nav-item"><a class="nav-link text-white-50 fw-medium" href="#">Orders</a></li>
-            <li class="nav-item"><a class="nav-link text-white-50 fw-medium" href="#">Customers</a></li>
-            <li class="nav-item ms-lg-3">
-              <button class="btn btn-outline-light rounded-pill px-4 btn-sm fw-bold text-uppercase tracking-wide">Log Out</button>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
+    <AdminNavbar />
 
     <main class="flex-grow-1 py-5">
       <div class="container px-lg-5">
@@ -156,11 +134,7 @@
       </div>
     </main>
 
-    <footer class="bg-white border-top py-4 text-center">
-      <p class="text-muted extra-small mb-0 text-uppercase tracking-wide">
-        &copy; 2025 MarketHub Admin Panel.
-      </p>
-    </footer>
+    <AdminFooter />
 
     <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true" ref="productModal">
       <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -241,9 +215,16 @@
 <script>
 /* Global bootstrap variable expected from CDN or main.js */
 /* eslint-disable no-undef */
+import AdminNavbar from '@/components/Admin/AdminNavbar.vue';
+import AdminFooter from '@/components/Admin/AdminFooter.vue';
+
 
 export default {
   name: "AdminProducts",
+  components: {
+    AdminNavbar,
+    AdminFooter
+  },
   data() {
     return {
       searchQuery: "",
