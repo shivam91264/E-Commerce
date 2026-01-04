@@ -13,56 +13,36 @@
 
       <router-link class="navbar-brand fw-bold tracking-tight me-lg-5" to="/">
         MARKETHUB<span class="text-primary">.</span>
-        <span v-if="userRole === 'admin'" class="ms-2 badge bg-dark text-white fw-normal ls-1 extra-small">ADMIN</span>
       </router-link>
 
       <div class="collapse navbar-collapse flex-grow-0 me-auto d-none d-lg-block">
         <ul class="navbar-nav gap-4">
-          
-          <template v-if="userRole === 'admin'">
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/admin/dashboard">Dashboard</router-link>
-            </li>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/admin/products">Products</router-link>
-            </li>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/admin/orders">Orders</router-link>
-            </li>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/admin/analytics">Analytics</router-link>
-            </li>
-          </template>
-
-          <template v-else>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/">Home</router-link>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link hover-underline d-flex align-items-center gap-1 dropdown-toggle" href="#" data-bs-toggle="dropdown">Shop</a>
-              <ul class="dropdown-menu border-0 shadow-lg p-3 rounded-3 mt-2">
-                <li v-for="cat in categories" :key="cat.id">
-                  <a class="dropdown-item py-2 rounded-2" href="#" @click.prevent="$emit('filter-category', cat.id)">{{ cat.name }}</a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li><router-link class="dropdown-item fw-bold" to="/shop">View All</router-link></li>
-              </ul>
-            </li>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/newarrivals">New Arrivals</router-link>
-            </li>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/about">About</router-link>
-            </li>
-            <li class="nav-item">
-              <router-link class="nav-link hover-underline" to="/contact">Contact</router-link>
-            </li>
-          </template>
-
+          <li class="nav-item">
+            <router-link class="nav-link hover-underline" to="/">Home</router-link>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link hover-underline d-flex align-items-center gap-1 dropdown-toggle" href="#" data-bs-toggle="dropdown">Shop</a>
+            <ul class="dropdown-menu border-0 shadow-lg p-3 rounded-3 mt-2">
+              <li v-for="cat in categories" :key="cat.id">
+                <a class="dropdown-item py-2 rounded-2" href="#" @click.prevent="$emit('filter-category', cat.id)">{{ cat.name }}</a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li><router-link class="dropdown-item fw-bold" to="/shop">View All</router-link></li>
+            </ul>
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link hover-underline" to="/newarrivals">New Arrivals</router-link>
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link hover-underline" to="/about">About</router-link>
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link hover-underline" to="/contact">Contact</router-link>
+          </li>
         </ul>
       </div>
 
-      <div v-if="userRole !== 'admin'" class="d-none d-lg-block mx-auto w-100 px-5" style="max-width: 600px;">
+      <div class="d-none d-lg-block mx-auto w-100 px-5" style="max-width: 600px;">
         <form class="position-relative" @submit.prevent="handleSearch">
           <input 
             type="text" 
@@ -77,7 +57,7 @@
       </div>
 
       <div class="d-flex align-items-center gap-3 gap-lg-4 ms-auto">
-        <button v-if="userRole !== 'admin'" class="btn btn-link text-dark p-0 d-lg-none" @click="toggleMobileSearch">
+        <button class="btn btn-link text-dark p-0 d-lg-none" @click="toggleMobileSearch">
           <i class="bi bi-search fs-5"></i>
         </button>
 
@@ -85,7 +65,7 @@
           <a class="text-dark text-decoration-none d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
             <i class="bi bi-person fs-5"></i>
             <span class="d-none d-lg-inline small fw-bold text-uppercase ls-1" v-if="isAuthenticated">
-              {{ userRole === 'admin' ? 'Admin' : 'Account' }}
+              Account
             </span>
           </a>
           <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 mt-3">
@@ -94,22 +74,16 @@
               <li><router-link class="dropdown-item py-2" to="/register">Register</router-link></li>
             </template>
             <template v-else>
-              <template v-if="userRole === 'admin'">
-                <li><router-link class="dropdown-item" to="/admin/dashboard">Admin Dashboard</router-link></li>
-                <li><router-link class="dropdown-item" to="/admin/messages">Messages</router-link></li>
-              </template>
-              <template v-else>
-                <li><router-link class="dropdown-item" to="/profile">My Profile</router-link></li>
-                <li><router-link class="dropdown-item" to="/orders">My Orders</router-link></li>
-                <li><router-link class="dropdown-item" to="/wishlist">Wishlist</router-link></li>
-              </template>
+              <li><router-link class="dropdown-item" to="/profile">My Profile</router-link></li>
+              <li><router-link class="dropdown-item" to="/orders">My Orders</router-link></li>
+              <li><router-link class="dropdown-item" to="/wishlist">Wishlist</router-link></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item text-danger fw-bold" href="#" @click.prevent="$emit('logout')">Logout</a></li>
             </template>
           </ul>
         </div>
 
-        <router-link v-if="userRole !== 'admin'" class="text-dark position-relative" to="/cart">
+        <router-link class="text-dark position-relative" to="/cart">
           <i class="bi bi-bag fs-5"></i>
           <span v-if="cartItemCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark border border-white text-white" style="font-size: 0.65rem; padding: 0.35em 0.5em;">
             {{ cartItemCount }}
@@ -126,21 +100,11 @@
     </div>
     <div class="offcanvas-body d-flex flex-column">
       <ul class="nav flex-column gap-3 fs-5 mb-auto">
-        
-        <template v-if="userRole === 'admin'">
-          <li class="nav-item"><router-link class="nav-link text-dark fw-bold" to="/admin/dashboard" @click="closeOffcanvas">Dashboard</router-link></li>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/admin/products" @click="closeOffcanvas">Manage Products</router-link></li>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/admin/orders" @click="closeOffcanvas">Manage Orders</router-link></li>
-        </template>
-
-        <template v-else>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-bold" to="/" @click="closeOffcanvas">Home</router-link></li>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/shop" @click="closeOffcanvas">Shop</router-link></li>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/new-arrivals" @click="closeOffcanvas">New Arrivals</router-link></li>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/about" @click="closeOffcanvas">About Us</router-link></li>
-          <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/contact" @click="closeOffcanvas">Contact</router-link></li>
-        </template>
-
+        <li class="nav-item"><router-link class="nav-link text-dark fw-bold" to="/" @click="closeOffcanvas">Home</router-link></li>
+        <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/shop" @click="closeOffcanvas">Shop</router-link></li>
+        <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/new-arrivals" @click="closeOffcanvas">New Arrivals</router-link></li>
+        <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/about" @click="closeOffcanvas">About Us</router-link></li>
+        <li class="nav-item"><router-link class="nav-link text-dark fw-medium" to="/contact" @click="closeOffcanvas">Contact</router-link></li>
       </ul>
       <div class="mt-4 border-top pt-4">
         <router-link v-if="!isAuthenticated" class="btn btn-dark w-100 py-3 rounded-pill fw-bold mb-3" to="/login" @click="closeOffcanvas">Log In / Sign Up</router-link>
@@ -152,11 +116,10 @@
 
 <script>
 export default {
-  name: "UnifiedNavbar",
+  name: "UserNavbar",
   props: {
     isAuthenticated: { type: Boolean, default: false },
-    cartItemCount: { type: Number, default: 0 },
-    userRole: { type: String, default: 'guest' }
+    cartItemCount: { type: Number, default: 0 }
   },
   data() {
     return {
@@ -190,11 +153,6 @@ export default {
     },
     toggleMobileSearch() {
       this.showMobileSearch = !this.showMobileSearch;
-      if (this.showMobileSearch) {
-        this.$nextTick(() => {
-          if (this.$refs.mobileSearchInput) this.$refs.mobileSearchInput.focus();
-        });
-      }
     },
     closeOffcanvas() {
       const offcanvasEl = document.getElementById('mobileMenu');
@@ -209,7 +167,6 @@ export default {
 </script>
 
 <style scoped>
-/* Styles remain unchanged to preserve your layout */
 .premium-navbar {
   transition: all 0.3s ease;
   padding-top: 1.25rem;

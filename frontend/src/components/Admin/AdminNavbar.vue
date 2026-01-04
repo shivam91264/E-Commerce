@@ -1,12 +1,12 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-black sticky-top py-3">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top py-3 border-bottom">
     <div class="container px-lg-5">
       <router-link
-        class="navbar-brand fw-bold tracking-tight fs-4"
+        class="navbar-brand fw-bold tracking-tight fs-4 text-dark"
         to="/admin/dashboard"
       >
         MARKETHUB
-        <span class="text-secondary fw-normal fs-6 ps-2">| &nbsp;Admin</span>
+        <span class="text-muted fw-normal fs-6 ps-2">| &nbsp;Admin</span>
       </router-link>
 
       <button
@@ -27,7 +27,12 @@
           <li class="nav-item"><router-link to="/adminusers" class="nav-link fw-medium" active-class="active">Users</router-link></li>
           <li class="nav-item"><router-link to="/adminmessages" class="nav-link fw-medium" active-class="active">Messages</router-link></li>
           <li class="nav-item"><router-link to="/adminanalytics" class="nav-link fw-medium" active-class="active">Analytics</router-link></li>
-          <li class="nav-item ms-lg-3"><button class="btn btn-outline-light rounded-pill px-4 btn-sm fw-bold text-uppercase tracking-wide" @click="logout">Log Out</button></li>
+          
+          <li class="nav-item ms-lg-3">
+            <button class="btn btn-dark rounded-pill px-4 btn-sm fw-bold text-uppercase tracking-wide" @click="logout">
+              Log Out
+            </button>
+          </li>
 
         </ul>
       </div>
@@ -40,7 +45,7 @@ export default {
   name: "AdminNavbar",
   methods: {
     logout() {
-      // later connect API / clear token
+      this.$emit('logout'); // Ensure this matches your App.vue logout handler
       this.$router.push("/login");
     }
   }
@@ -48,11 +53,13 @@ export default {
 </script>
 
 <style scoped>
-/* keeps your original navbar color behavior */
+/* Updated link colors for the white background */
 .nav-link {
-  color: rgba(255, 255, 255, 0.5);
+  color: #555 !important;
 }
-.nav-link.active {
-  color: #fff;
+.nav-link:hover, .nav-link.active {
+  color: #000 !important;
 }
+
+.tracking-tight { letter-spacing: -0.05em; }
 </style>

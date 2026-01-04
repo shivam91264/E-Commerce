@@ -1,12 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="cartCount" 
-      user-role="guest"
-    />
-
     <div class="flex-grow-1">
       <div class="container px-lg-5 py-5">
         
@@ -130,21 +124,15 @@
       </button>
     </div>
 
-    <PremiumFooter />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 import CartItem from '@/components/CartItem.vue';
 
 export default {
   name: "CartView",
   components: {
-    PremiumNavbar,
-    PremiumFooter,
     CartItem
   },
   data() {

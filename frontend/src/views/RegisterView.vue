@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="0" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <main class="flex-grow-1 d-flex align-items-center position-relative py-5">
       <div class="container px-lg-5">
         <div class="row g-0 shadow-2xl rounded-5 overflow-hidden border border-light">
@@ -180,7 +173,6 @@
       </div>
     </main>
 
-    <PremiumFooter @navigate="handleNavigation" />
 
   </div>
 </template>
@@ -189,8 +181,6 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 
 const router = useRouter();
 

@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="3" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <div class="flex-grow-1 pb-5 mb-5 mb-lg-0">
       
       <div class="container px-lg-5 pt-4 pb-2">
@@ -250,21 +243,15 @@
       </div>
     </div>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 import ProductCard from '@/components/ProductCard.vue';
 
 export default {
   name: "ProductDetails",
   components: {
-    PremiumNavbar,
-    PremiumFooter,
     ProductCard
   },
   data() {

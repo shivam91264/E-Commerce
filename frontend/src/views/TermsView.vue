@@ -1,12 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-light-subtle">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="0" 
-      user-role="guest"
-    />
-
     <main class="flex-grow-1">
       
       <header class="bg-white pt-5 pb-4 border-bottom border-light">
@@ -132,21 +126,13 @@
       </div>
     </main>
 
-    <PremiumFooter />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 
 export default {
   name: "TermsView",
-  components: {
-    PremiumNavbar,
-    PremiumFooter
-  }
 };
 </script>
 

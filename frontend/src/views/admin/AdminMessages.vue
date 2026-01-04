@@ -1,7 +1,5 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-light-subtle">
-    
-    <AdminNavbar />
 
     <main class="flex-grow-1 py-5">
       <div class="container px-lg-5">
@@ -216,7 +214,6 @@
       </div>
     </div>
 
-    <AdminFooter />
 
   </div>
 </template>
@@ -224,15 +221,9 @@
 <script>
 /* Global bootstrap variable expected from CDN/main.js */
 /* eslint-disable no-undef */
-import AdminNavbar from '@/components/Admin/AdminNavbar.vue';
-import AdminFooter from '@/components/Admin/AdminFooter.vue';
 
 export default {
   name: "AdminMessages",
-  components: {
-    AdminNavbar,
-    AdminFooter
-  },
   data() {
     return {
       searchQuery: "",

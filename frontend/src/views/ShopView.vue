@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="3" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <header class="shop-hero position-relative d-flex align-items-center justify-content-center text-center text-white overflow-hidden">
       <img 
         src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80" 
@@ -83,8 +76,6 @@
       </div>
     </main>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
     <div class="offcanvas offcanvas-start" tabindex="-1" id="filterOffcanvas" aria-labelledby="filterOffcanvasLabel">
       <div class="offcanvas-header border-bottom p-4">
         <h5 class="offcanvas-title fw-bold text-uppercase tracking-wide" id="filterOffcanvasLabel">Filter & Sort</h5>
@@ -146,15 +137,11 @@
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 import ProductCard from '@/components/ProductCard.vue';
 
 export default {
   name: "ShopView",
   components: {
-    PremiumNavbar,
-    PremiumFooter,
     ProductCard
   },
   data() {

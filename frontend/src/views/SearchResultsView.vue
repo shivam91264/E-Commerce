@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="2" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <main class="flex-grow-1">
       
       <header class="bg-light-subtle py-5 border-bottom border-light">
@@ -101,21 +94,15 @@
       </div>
     </main>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 import ProductCard from '@/components/ProductCard.vue';
 
 export default {
   name: "SearchResultsView",
   components: {
-    PremiumNavbar,
-    PremiumFooter,
     ProductCard
   },
   data() {

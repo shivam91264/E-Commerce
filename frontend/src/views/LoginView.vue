@@ -1,13 +1,5 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
-    
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="0" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <main class="flex-grow-1 d-flex align-items-center position-relative py-5">
       <div class="container px-lg-5">
         <div class="row g-0 shadow-2xl rounded-5 overflow-hidden border border-light">
@@ -45,7 +37,6 @@
               </div>
 
               <form @submit.prevent="handleLogin">
-                
                 <div class="mb-4">
                   <label for="email" class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">Email Address</label>
                   <input 
@@ -97,26 +88,6 @@
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   {{ loading ? 'Authenticating...' : 'Log In' }}
                 </button>
-
-                <div class="d-flex align-items-center mb-4">
-                  <hr class="flex-grow-1 border-secondary opacity-10">
-                  <span class="mx-3 extra-small text-muted text-uppercase">Or continue with</span>
-                  <hr class="flex-grow-1 border-secondary opacity-10">
-                </div>
-
-                <div class="row g-2">
-                  <div class="col-6">
-                    <button type="button" class="btn btn-outline-light border-secondary-subtle text-dark w-100 py-2 rounded-0 d-flex align-items-center justify-content-center gap-2 hover-border-dark">
-                      <i class="bi bi-google"></i> <span class="small fw-medium">Google</span>
-                    </button>
-                  </div>
-                  <div class="col-6">
-                    <button type="button" class="btn btn-outline-light border-secondary-subtle text-dark w-100 py-2 rounded-0 d-flex align-items-center justify-content-center gap-2 hover-border-dark">
-                      <i class="bi bi-apple"></i> <span class="small fw-medium">Apple</span>
-                    </button>
-                  </div>
-                </div>
-
               </form>
 
               <div class="mt-5 pt-4 border-top border-light d-flex justify-content-between text-center">
@@ -140,9 +111,6 @@
         </div>
       </div>
     </main>
-
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
@@ -150,13 +118,9 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 
-// Router instance for navigation
 const router = useRouter();
 
-// Form and UI state
 const credentials = reactive({
   email: '',
   password: ''
@@ -166,16 +130,10 @@ const showPassword = ref(false);
 const loading = ref(false);
 const error = ref(null);
 
-/**
- * Handle page navigation
- */
 const handleNavigation = (page) => {
   router.push({ name: page });
 };
 
-/**
- * Perform login API request
- */
 const handleLogin = async () => {
   error.value = null;
   loading.value = true;
@@ -186,78 +144,65 @@ const handleLogin = async () => {
       password: credentials.password
     });
 
-    // Handle successful login
     if (response.data && response.data.access_token) {
-      // Store JWT token
+      // 1. Store the token
       localStorage.setItem('access_token', response.data.access_token);
       
-      // Store user info if provided by the backend
-      if (response.data.user) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
+      // 2. Store the role and user info
+      localStorage.setItem('is_admin', response.data.is_admin);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      // Redirect to home/dashboard
-      router.push({ name: 'home' });
+      // 3. ROLE-BASED REDIRECTION
+      if (response.data.is_admin === true) {
+        // Redirect to Admin Dashboard
+        router.push({ name: 'admindashboard' }).then(() => {
+            window.location.reload(); // Refresh to let App.vue pick up the new role
+        });
+      } else {
+        // Redirect to User Home
+        router.push({ name: 'home' }).then(() => {
+            window.location.reload(); // Refresh to let App.vue pick up the new auth state
+        });
+      }
     }
   } catch (err) {
-    // Handle error responses from Flask
     console.error('Login Error:', err);
-    error.value = err.response?.data?.message || 'Invalid email or password. Please try again.';
+    error.value = err.response?.data?.msg || 'Invalid email or password. Please try again.';
   } finally {
     loading.value = false;
   }
 };
 
-/**
- * Trigger password recovery alert
- */
 const forgotPassword = () => {
   alert("Redirecting to password recovery...");
 };
 </script>
 
 <style scoped>
-/* PREMIUM DESIGN SYSTEM */
-
-/* Layout & Shadows */
-.shadow-2xl {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Typography */
+/* Shadows & Spacing */
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1) !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
 .hover-dark:hover { color: #000 !important; }
 
-/* Form Elements */
+/* Form Focus */
 .form-control:focus {
   background-color: #fff;
   border: 1px solid #000 !important;
   box-shadow: none;
 }
 
-.hover-border-dark:hover {
-  border-color: #000 !important;
-  background-color: #f8f9fa;
-}
-
-/* Animations & Interactions */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+/* Hover Effects */
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .hover-lift:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-
 .cursor-pointer { cursor: pointer; }
+.object-fit-cover { object-fit: cover; }
 
-/* Responsive Adjustments */
 @media (min-width: 992px) {
   .p-md-6 { padding: 4rem; }
 }
-
-/* Image styling */
-.object-fit-cover { object-fit: cover; }
 </style>

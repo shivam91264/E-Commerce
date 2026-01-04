@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="3" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <header class="hero-section position-relative d-flex align-items-center text-white overflow-hidden">
       <img 
         src="https://images.unsplash.com/photo-1483985988355-763728e1935b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80" 
@@ -123,21 +116,15 @@
       </div>
     </section>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 import ProductCard from '@/components/ProductCard.vue';
 
 export default {
   name: "NewArrivalsView",
   components: {
-    PremiumNavbar,
-    PremiumFooter,
     ProductCard
   },
   data() {

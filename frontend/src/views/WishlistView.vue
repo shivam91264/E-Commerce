@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-light-subtle">
     
-    <PremiumNavbar 
-      :is-authenticated="true" 
-      :cart-item-count="2" 
-      user-role="user"
-      @navigate="handleNavigation"
-    />
-
     <main class="flex-grow-1 py-5">
       <div class="container px-lg-5">
         
@@ -78,21 +71,15 @@
       </div>
     </main>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 import ProductCard from '@/components/ProductCard.vue';
 
 export default {
   name: "WishlistView",
   components: {
-    PremiumNavbar,
-    PremiumFooter,
     ProductCard
   },
   data() {

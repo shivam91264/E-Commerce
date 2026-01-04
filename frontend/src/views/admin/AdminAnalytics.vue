@@ -1,8 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-light-subtle">
     
-    <AdminNavbar />
-
     <main class="flex-grow-1 py-5">
       <div class="container px-lg-5">
         
@@ -202,7 +200,6 @@
       </div>
     </main>
 
-    <AdminFooter />
 
   </div>
 </template>
@@ -211,15 +208,9 @@
 // IMPORTANT: You must install chart.js to use this component
 // Run: npm install chart.js
 import Chart from 'chart.js/auto';
-import AdminNavbar from '@/components/Admin/AdminNavbar.vue';
-import AdminFooter from '@/components/Admin/AdminFooter.vue';
 
 export default {
   name: "AdminAnalytics",
-  components: {
-    AdminNavbar,
-    AdminFooter
-  },
   data() {
     return {
       revenueChart: null,

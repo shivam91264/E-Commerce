@@ -1,16 +1,6 @@
 <template>
   <div class="home-wrapper">
     
-    <PremiumNavbar 
-      :is-authenticated="isAuthenticated"
-      :cart-item-count="cartCount"
-      user-role="customer"
-      @navigate="handleNavigation"
-      @logout="handleLogout"
-      @search="handleSearch"
-      @filter-category="handleCategory"
-    />
-
     <main>
 
       <section class="hero-section position-relative d-flex align-items-center">
@@ -209,22 +199,15 @@
 
     </main>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
 <script>
 // Mock Imports - Ensure these files exist in your project structure
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 
 export default {
   name: "HomeView",
-  components: {
-    PremiumNavbar,
-    PremiumFooter
-  },
+  
   data() {
     return {
       isAuthenticated: false, // Toggle to test logged-in state

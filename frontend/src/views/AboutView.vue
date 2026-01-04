@@ -1,13 +1,6 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <PremiumNavbar 
-      :is-authenticated="false" 
-      :cart-item-count="3" 
-      user-role="guest"
-      @navigate="handleNavigation"
-    />
-
     <main class="flex-grow-1">
 
       <header class="position-relative d-flex align-items-center justify-content-center text-center text-white overflow-hidden" style="height: 65vh; min-height: 550px;">
@@ -168,21 +161,13 @@
 
     </main>
 
-    <PremiumFooter @navigate="handleNavigation" />
-
   </div>
 </template>
 
 <script>
-import PremiumNavbar from '@/components/Navbar.vue';
-import PremiumFooter from '@/components/Footer.vue';
 
 export default {
   name: "AboutView",
-  components: {
-    PremiumNavbar,
-    PremiumFooter
-  },
   data() {
     return {
       values: [
