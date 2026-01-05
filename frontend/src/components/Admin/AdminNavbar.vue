@@ -56,9 +56,33 @@ export default {
 /* Updated link colors for the white background */
 .nav-link {
   color: #555 !important;
+  position: relative; /* Required for the underline positioning */
+  padding-bottom: 5px; /* Adds a little space for the underline */
 }
+
 .nav-link:hover, .nav-link.active {
   color: #000 !important;
+}
+
+/* The Underline Animation Logic */
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: #000;
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+/* Show underline on hover and when the link is active */
+.nav-link:hover::after, 
+.nav-link.active::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }
 
 .tracking-tight { letter-spacing: -0.05em; }
