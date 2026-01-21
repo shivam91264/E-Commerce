@@ -42,7 +42,6 @@
         </div>
 
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden animate-fade-up delay-200">
-          
           <div v-if="loading" class="text-center py-5">
             <div class="spinner-border text-dark" role="status"></div>
             <p class="text-muted small mt-2">Loading users...</p>
@@ -62,7 +61,6 @@
               </thead>
               <tbody>
                 <tr v-for="user in users" :key="user.id" class="cursor-pointer" @click="openUserDrawer(user)">
-                  
                   <td class="ps-4 py-3">
                     <div class="d-flex align-items-center gap-3">
                       <div class="bg-light rounded-circle d-flex align-items-center justify-content-center fw-bold text-secondary border shadow-sm" style="width: 42px; height: 42px; font-size: 0.85rem;">
@@ -74,22 +72,18 @@
                       </div>
                     </div>
                   </td>
-                  
                   <td class="py-3 small text-muted">{{ user.email }}</td>
                   <td class="py-3 small text-muted">{{ user.phone || 'N/A' }}</td>
-
                   <td class="py-3 text-center">
                     <span class="badge bg-light text-dark border fw-normal rounded-pill extra-small px-2">
                       {{ user.ordersCount }}
                     </span>
                   </td>
-
                   <td class="py-3">
                     <span class="badge rounded-pill border px-2 py-1 extra-small fw-bold text-uppercase" :class="user.active ? 'bg-success-subtle text-success border-success-subtle' : 'bg-danger-subtle text-danger border-danger-subtle'">
                       {{ user.active ? 'Active' : 'Blocked' }}
                     </span>
                   </td>
-
                   <td class="pe-4 py-3 text-end" @click.stop>
                     <div class="d-flex justify-content-end gap-2">
                       <button class="btn btn-sm btn-white border rounded-circle shadow-sm" title="View Details" @click="openUserDrawer(user)">
@@ -104,13 +98,9 @@
                     </div>
                   </td>
                 </tr>
-                
                 <tr v-if="users.length === 0">
                   <td colspan="6" class="text-center py-5">
-                    <div class="d-inline-flex p-3 rounded-circle bg-light mb-3">
-                      <i class="bi bi-person-x text-muted fs-3"></i>
-                    </div>
-                    <p class="text-muted small mb-0">No users found matching your criteria.</p>
+                    <p class="text-muted small mb-0">No users found.</p>
                   </td>
                 </tr>
               </tbody>
@@ -127,11 +117,9 @@
                       <i class="bi bi-chevron-left"></i>
                     </a>
                   </li>
-                  
                   <li class="page-item active">
                     <span class="page-link rounded-circle border-0 bg-dark text-white fw-bold">{{ page }}</span>
                   </li>
-                  
                   <li class="page-item" :class="{ disabled: page >= totalPages }">
                     <a class="page-link rounded-circle border-0 text-dark" href="#" @click.prevent="changePage(page + 1)">
                       <i class="bi bi-chevron-right"></i>
@@ -142,7 +130,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </main>
 
@@ -153,7 +140,6 @@
       </div>
       
       <div class="offcanvas-body p-0" v-if="selectedUser">
-        
         <div class="p-5 text-center bg-light border-bottom">
           <div class="mx-auto bg-white rounded-circle d-flex align-items-center justify-content-center fw-bold display-6 text-dark border shadow-sm mb-3" style="width: 80px; height: 80px;">
             {{ getInitials(selectedUser.name) }}
@@ -186,8 +172,13 @@
         <div class="p-4 bg-light-subtle h-100">
            <h6 class="fw-bold mb-3 small text-uppercase tracking-wide text-muted">Actions</h6>
            <div class="d-grid gap-2">
-             <button class="btn btn-white border w-100 text-start d-flex align-items-center justify-content-between p-3 hover-lift">
+             <button class="btn btn-white border w-100 text-start d-flex align-items-center justify-content-between p-3 hover-lift" @click="viewUserOrders(selectedUser)">
                <span class="small fw-bold"><i class="bi bi-box-seam me-2 text-muted"></i> View Orders</span>
+               <i class="bi bi-chevron-right small text-muted"></i>
+             </button>
+             
+             <button class="btn btn-white border w-100 text-start d-flex align-items-center justify-content-between p-3 hover-lift" @click="viewUserAddresses(selectedUser)">
+               <span class="small fw-bold"><i class="bi bi-geo-alt me-2 text-muted"></i> Saved Addresses</span>
                <i class="bi bi-chevron-right small text-muted"></i>
              </button>
              
@@ -200,7 +191,73 @@
              </button>
            </div>
         </div>
+      </div>
+    </div>
 
+    <div class="modal fade" id="ordersModal" tabindex="-1" ref="ordersModal">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow-2xl">
+          <div class="modal-header border-bottom p-4">
+            <h5 class="modal-title fw-bold tracking-tight">Order History</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-0">
+            <div v-if="userOrders.length === 0" class="text-center p-5 text-muted">
+              <i class="bi bi-cart-x fs-1 mb-2"></i>
+              <p class="mb-0 small">No orders found for this user.</p>
+            </div>
+            <div v-else class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="ps-4 py-3 extra-small text-muted fw-bold">Order ID</th>
+                    <th class="py-3 extra-small text-muted fw-bold">Date</th>
+                    <th class="py-3 extra-small text-muted fw-bold">Items</th>
+                    <th class="py-3 extra-small text-muted fw-bold">Total</th>
+                    <th class="pe-4 py-3 extra-small text-muted fw-bold text-end">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="order in userOrders" :key="order.id">
+                    <td class="ps-4 py-3 font-monospace small fw-bold">{{ order.id }}</td>
+                    <td class="py-3 small text-muted">{{ order.date }}</td>
+                    <td class="py-3 small">{{ order.items_count }}</td>
+                    <td class="py-3 small fw-bold">{{ order.total }}</td>
+                    <td class="pe-4 py-3 text-end">
+                      <span class="badge bg-light text-dark border px-2 py-1 extra-small">{{ order.status }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="addressesModal" tabindex="-1" ref="addressesModal">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-2xl">
+          <div class="modal-header border-bottom p-4">
+            <h5 class="modal-title fw-bold tracking-tight">Saved Addresses</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div v-if="userAddresses.length === 0" class="text-center p-4 text-muted">
+              <i class="bi bi-geo-alt fs-1 mb-2"></i>
+              <p class="mb-0 small">No addresses saved.</p>
+            </div>
+            <div v-else class="d-flex flex-column gap-3">
+              <div v-for="addr in userAddresses" :key="addr.id" class="p-3 bg-light rounded-3 border">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="badge bg-dark extra-small">{{ addr.type }}</span>
+                  <small class="text-muted">{{ addr.country }}</small>
+                </div>
+                <p class="mb-0 small fw-medium text-dark">{{ addr.address }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -231,7 +288,7 @@
 
 <script>
 import api from "@/services/api";
-import { Modal, Offcanvas } from 'bootstrap'; // FIX: Explicit Import to prevent crash
+import { Modal, Offcanvas } from 'bootstrap';
 
 export default {
   name: "AdminUsers",
@@ -240,10 +297,18 @@ export default {
       searchQuery: "",
       filterStatus: "All",
       filterRole: "All",
+      
+      // Selected Data
       selectedUser: null,
       actionTarget: null,
+      userOrders: [],
+      userAddresses: [],
+      
+      // Bootstrap Instances
       userDrawerInstance: null,
       blockModalInstance: null,
+      ordersModalInstance: null,
+      addressesModalInstance: null,
       
       users: [], 
       loading: false,
@@ -260,13 +325,11 @@ export default {
   },
 
   mounted() {
-    // FIX: Use imported classes instead of window.bootstrap
-    if (this.$refs.userDrawer) {
-      this.userDrawerInstance = new Offcanvas(this.$refs.userDrawer);
-    }
-    if (this.$refs.blockModal) {
-      this.blockModalInstance = new Modal(this.$refs.blockModal);
-    }
+    // Initialize ALL Bootstrap components
+    if (this.$refs.userDrawer) this.userDrawerInstance = new Offcanvas(this.$refs.userDrawer);
+    if (this.$refs.blockModal) this.blockModalInstance = new Modal(this.$refs.blockModal);
+    if (this.$refs.ordersModal) this.ordersModalInstance = new Modal(this.$refs.ordersModal);
+    if (this.$refs.addressesModal) this.addressesModalInstance = new Modal(this.$refs.addressesModal);
     
     this.fetchUsers();
   },
@@ -286,7 +349,6 @@ export default {
         const response = await api.get('/admin/users', { params });
         this.users = response.data.data;
         this.totalPages = response.data.pages || 1;
-        
       } catch (error) {
         console.error("Failed to load users", error);
       } finally {
@@ -294,14 +356,33 @@ export default {
       }
     },
 
-    debounceFetch() {
-      clearTimeout(this._timer);
-      this._timer = setTimeout(() => {
-        this.page = 1; 
-        this.fetchUsers();
-      }, 500);
+    // --- Action: View Orders ---
+    async viewUserOrders(user) {
+      if (!user) return;
+      try {
+        const response = await api.get(`/admin/users/${user.id}/orders`);
+        this.userOrders = response.data.data;
+        this.ordersModalInstance?.show();
+      } catch (error) {
+        console.error("Failed to load orders", error);
+        alert("Could not load user orders.");
+      }
     },
 
+    // --- Action: View Addresses ---
+    async viewUserAddresses(user) {
+      if (!user) return;
+      try {
+        const response = await api.get(`/admin/users/${user.id}/addresses`);
+        this.userAddresses = response.data.data;
+        this.addressesModalInstance?.show();
+      } catch (error) {
+        console.error("Failed to load addresses", error);
+        alert("Could not load user addresses.");
+      }
+    },
+
+    // --- Action: Block Toggle ---
     confirmBlockToggle(user) {
       this.actionTarget = user;
       this.blockModalInstance?.show();
@@ -309,24 +390,16 @@ export default {
 
     async executeBlockToggle() {
       if (!this.actionTarget) return;
-
       try {
         const newStatus = !this.actionTarget.active;
-        
-        await api.put(`/admin/users/${this.actionTarget.id}/status`, {
-          is_active: newStatus
-        });
-
+        await api.put(`/admin/users/${this.actionTarget.id}/status`, { is_active: newStatus });
         this.actionTarget.active = newStatus;
-        
         if (this.selectedUser && this.selectedUser.id === this.actionTarget.id) {
            this.selectedUser.active = newStatus; 
         }
-
         this.blockModalInstance?.hide();
       } catch (error) {
         alert("Failed to update user status.");
-        console.error(error);
       }
     },
 
@@ -338,6 +411,14 @@ export default {
     getInitials(name) {
       if (!name) return "U";
       return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    },
+    
+    debounceFetch() {
+      clearTimeout(this._timer);
+      this._timer = setTimeout(() => {
+        this.page = 1; 
+        this.fetchUsers();
+      }, 500);
     },
     
     changePage(newPage) {
