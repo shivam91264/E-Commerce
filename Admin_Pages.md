@@ -29,3 +29,11 @@ GET /admin/users
 GET /admin/users/<user_id>/orders
 GET /admin/users/<user_id>/addresses
 PUT /admin/users/<user_id>/status
+
+
+
+AdminMessages.vue :--
+
+GET /admin/messages
+PUT /admin/messages/<int:id>/status
+PUT /admin/messages/archive-resolved

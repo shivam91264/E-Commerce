@@ -16,6 +16,7 @@ import AddressesView from '../views/AddressesView.vue'
 import ContactView from '../views/ContactView.vue'
 import AdminDashboard from '../views/admin/AdminDashboard.vue'
 import AdminProducts from '../views/admin/AdminProducts.vue'
+import AdminCategories from '../views/admin/AdminCategories.vue'
 import AdminOrders from '../views/admin/AdminOrders.vue'
 import AdminUsers from '../views/admin/AdminUsers.vue'
 import AdminMessages from '../views/admin/AdminMessages.vue'
@@ -119,6 +120,11 @@ const router = createRouter({
       path: '/admin/orders',
       name: 'adminorders',
       component: AdminOrders,
+    },
+    {
+      path: '/admin/categories',
+      name: 'admincategories',
+      component: AdminCategories,
     },
     {
       path: '/admin/users',

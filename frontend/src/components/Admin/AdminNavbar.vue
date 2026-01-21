@@ -22,6 +22,7 @@
         <ul class="navbar-nav ms-auto gap-lg-4 mb-2 mb-lg-0 align-items-lg-center">
 
           <li class="nav-item"><router-link to="/admin/dashboard" class="nav-link fw-medium" active-class="active">Dashboard</router-link></li>
+          <li class="nav-item"><router-link to="/admin/categories" class="nav-link fw-medium" active-class="active">Categories</router-link></li>
           <li class="nav-item"><router-link to="/admin/products" class="nav-link fw-medium" active-class="active">Products</router-link></li>
           <li class="nav-item"><router-link to="/admin/orders" class="nav-link fw-medium" active-class="active">Orders</router-link></li>
           <li class="nav-item"><router-link to="/admin/users" class="nav-link fw-medium" active-class="active">Users</router-link></li>
