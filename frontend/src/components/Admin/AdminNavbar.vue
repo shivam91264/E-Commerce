@@ -21,12 +21,12 @@
       <div class="collapse navbar-collapse" id="adminNav">
         <ul class="navbar-nav ms-auto gap-lg-4 mb-2 mb-lg-0 align-items-lg-center">
 
-          <li class="nav-item"><router-link to="/admindashboard" class="nav-link fw-medium" active-class="active">Dashboard</router-link></li>
-          <li class="nav-item"><router-link to="/adminproducts" class="nav-link fw-medium" active-class="active">Products</router-link></li>
-          <li class="nav-item"><router-link to="/adminorders" class="nav-link fw-medium" active-class="active">Orders</router-link></li>
-          <li class="nav-item"><router-link to="/adminusers" class="nav-link fw-medium" active-class="active">Users</router-link></li>
-          <li class="nav-item"><router-link to="/adminmessages" class="nav-link fw-medium" active-class="active">Messages</router-link></li>
-          <li class="nav-item"><router-link to="/adminanalytics" class="nav-link fw-medium" active-class="active">Analytics</router-link></li>
+          <li class="nav-item"><router-link to="/admin/dashboard" class="nav-link fw-medium" active-class="active">Dashboard</router-link></li>
+          <li class="nav-item"><router-link to="/admin/products" class="nav-link fw-medium" active-class="active">Products</router-link></li>
+          <li class="nav-item"><router-link to="/admin/orders" class="nav-link fw-medium" active-class="active">Orders</router-link></li>
+          <li class="nav-item"><router-link to="/admin/users" class="nav-link fw-medium" active-class="active">Users</router-link></li>
+          <li class="nav-item"><router-link to="/admin/messages" class="nav-link fw-medium" active-class="active">Messages</router-link></li>
+          <li class="nav-item"><router-link to="/admin/analytics" class="nav-link fw-medium" active-class="active">Analytics</router-link></li>
           
           <li class="nav-item ms-lg-3">
             <button class="btn btn-dark rounded-pill px-4 btn-sm fw-bold text-uppercase tracking-wide" @click="logout">

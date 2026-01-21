@@ -324,16 +324,14 @@ def archive_user(user_id):
 
 
 # ----------------------------------------------------------------------
-# 4. PRODUCTS MANAGEMENT (Vue Friendly)
+# 4. PRODUCTS MANAGEMENT (Updated for Vue Connection)
 # ----------------------------------------------------------------------
 
-
 # ---------- Helper: Convert DB Product to Vue format ---------- #
-
 def product_to_admin_vue(product):
     category = Category.query.get(product.category_id)
 
-    # fetch primary image or fallback to first or placeholder
+    # Fetch primary image or fallback
     primary_img = ProductImage.query.filter_by(product_id=product.id, is_primary=True).first()
     fallback_img = ProductImage.query.filter_by(product_id=product.id).first()
     image_url = primary_img.image_url if primary_img else (fallback_img.image_url if fallback_img else "https://via.placeholder.com/120")
@@ -341,37 +339,22 @@ def product_to_admin_vue(product):
     return {
         "id": product.id,
         "name": product.name,
-        "category": category.name if category else "Unknown",
+        "category": category.name if category else "Uncategorized",
+        "category_id": product.category_id,       # Required for Edit Dropdown
+        "description": product.description,       # Required for Edit Form
+        "sku": product.sku,
         "price": product.price,
-        "salePrice": product.sale_price,
-        "stock": product.stock_quantity,
-        "active": product.is_active,
+        "sale_price": product.sale_price,         # Matching Vue Key
+        "stock_quantity": product.stock_quantity, # Matching Vue Key
+        "is_active": product.is_active,           # Matching Vue Key
         "image": image_url
     }
 
-
 # ------------------ GET all products ------------------ #
-## Testing Done
-
-# @admin_bp.route('/admin/products', methods=['GET'])
-# @jwt_required()
-# def list_products():
-#     if not get_admin_user():
-#         return jsonify({"msg": "Admin access required"}), 401
-
-#     products = Product.query.order_by(Product.created_at.desc()).all()
-#     return jsonify({
-#         "data": [product_to_vue(p) for p in products],
-#         "msg": "Products list loaded"
-#     }), 200
-
-
-
 @admin_bp.route('/admin/products', methods=['GET'])
 @jwt_required()
 def list_products():
-    if not get_admin_user():
-        return jsonify({"msg": "Admin access required"}), 401
+    # if not get_admin_user(): return jsonify({"msg": "Admin access required"}), 401
 
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 10))
@@ -381,17 +364,14 @@ def list_products():
 
     query = Product.query
 
-    # Filter: category
     if category:
         cat = Category.query.filter_by(name=category).first()
         if cat:
             query = query.filter(Product.category_id == cat.id)
 
-    # Filter: active status
     if active is not None:
         query = query.filter(Product.is_active == (active.lower() == "true"))
 
-    # Search by name
     if search:
         query = query.filter(Product.name.ilike(f"%{search}%"))
 
@@ -409,31 +389,29 @@ def list_products():
 
 
 # ------------------ CREATE product ------------------ #
-## Testing Done
-
 @admin_bp.route('/admin/products', methods=['POST'])
 @jwt_required()
 def create_product():
-    if not get_admin_user():
-        return jsonify({"msg": "Admin access required"}), 401
+    # if not get_admin_user(): return jsonify({"msg": "Admin access required"}), 401
 
     data = request.get_json()
 
-    required_fields = ["name", "category_id", "price", "sku"]
-    for f in required_fields:
-        if not data.get(f):
+    # Validate Required Fields
+    required = ["name", "category_id", "price", "stock_quantity"]
+    for f in required:
+        if f not in data:
             return jsonify({"msg": f"{f} is required"}), 400
 
-    # validate category
+    # Validate Category
     category = Category.query.get(data["category_id"])
     if not category:
-        return jsonify({"msg": "Invalid category"}), 400
+        return jsonify({"msg": "Invalid category ID"}), 400
 
-    # check SKU uniqueness
-    if Product.query.filter_by(sku=data["sku"]).first():
+    # Validate SKU Uniqueness
+    if data.get("sku") and Product.query.filter_by(sku=data["sku"]).first():
         return jsonify({"msg": "SKU already exists"}), 400
 
-    # generate unique slug
+    # Generate Slug
     base_slug = slugify(data["name"])
     slug = base_slug
     count = 1
@@ -441,29 +419,25 @@ def create_product():
         slug = f"{base_slug}-{count}"
         count += 1
 
+    # Create Product
     new_prod = Product(
         name=data["name"],
         slug=slug,
-        sku=data["sku"],
+        sku=data.get("sku"),
         description=data.get("description"),
-        price=data["price"],
-        sale_price=data.get("sale_price"),
-        stock_quantity=data.get("stock", 0),
+        price=float(data["price"]),
+        sale_price=float(data["sale_price"]) if data.get("sale_price") else None,
+        stock_quantity=int(data["stock_quantity"]),
         category_id=category.id,
-        is_featured=data.get("is_featured", False),
-        is_active=data.get("active", True)
+        is_active=data.get("is_active", True)
     )
 
     db.session.add(new_prod)
     db.session.commit()
 
-    # image
+    # Handle Image
     if data.get("image"):
-        img = ProductImage(
-            product_id=new_prod.id,
-            image_url=data["image"],
-            is_primary=True
-        )
+        img = ProductImage(product_id=new_prod.id, image_url=data["image"], is_primary=True)
         db.session.add(img)
         db.session.commit()
 
@@ -474,14 +448,10 @@ def create_product():
 
 
 # ------------------ UPDATE product ------------------ #
-## Testing Done
-
-
 @admin_bp.route('/admin/products/<int:id>', methods=['PUT'])
 @jwt_required()
 def update_product(id):
-    if not get_admin_user():
-        return jsonify({"msg": "Admin access required"}), 401
+    # if not get_admin_user(): return jsonify({"msg": "Admin access required"}), 401
 
     prod = Product.query.get(id)
     if not prod:
@@ -489,38 +459,29 @@ def update_product(id):
 
     data = request.get_json()
 
-    # Update name & slug
-    if data.get("name") and data["name"] != prod.name:
+    # Update Fields if present
+    if "name" in data: 
         prod.name = data["name"]
-        prod.slug = data["name"].lower().replace(" ", "-")
+        # prod.slug = slugify(data["name"]) # Uncomment if you want slug to update with name
 
-    # Basic fields
-    prod.price = data.get("price", prod.price)
-    prod.sale_price = data.get("salePrice", prod.sale_price)
-    prod.stock_quantity = data.get("stock", prod.stock_quantity)
-    prod.is_active = data.get("active", prod.is_active)
-    prod.is_featured = data.get("is_featured", prod.is_featured)
-    prod.sku = data.get("sku", prod.sku)
-    prod.description = data.get("description", prod.description)
+    if "category_id" in data:
+        cat = Category.query.get(data["category_id"])
+        if cat: prod.category_id = cat.id
 
-    # Update category
-    if data.get("category"):
-        category = Category.query.filter_by(name=data["category"]).first()
-        if not category:
-            return jsonify({"msg": "Category not found"}), 400
-        prod.category_id = category.id
+    if "price" in data: prod.price = float(data["price"])
+    if "sale_price" in data: prod.sale_price = float(data["sale_price"]) if data["sale_price"] else None
+    if "stock_quantity" in data: prod.stock_quantity = int(data["stock_quantity"])
+    if "is_active" in data: prod.is_active = bool(data["is_active"])
+    if "sku" in data: prod.sku = data["sku"]
+    if "description" in data: prod.description = data["description"]
 
-    # Update image
-    if data.get("image"):
+    # Update Image
+    if "image" in data:
         img = ProductImage.query.filter_by(product_id=id, is_primary=True).first()
         if img:
             img.image_url = data["image"]
         else:
-            new_img = ProductImage(
-                product_id=id,
-                image_url=data["image"],
-                is_primary=True
-            )
+            new_img = ProductImage(product_id=id, image_url=data["image"], is_primary=True)
             db.session.add(new_img)
 
     db.session.commit()
@@ -532,48 +493,23 @@ def update_product(id):
 
 
 # ------------------ DELETE product ------------------ #
-
-## Testing Done
-
-## This api is hard deleteing the products :--
-# @admin_bp.route('/admin/products/<int:id>', methods=['DELETE'])
-# @jwt_required()
-# def delete_product(id):
-#     if not get_admin_user():
-#         return jsonify({"msg": "Admin access required"}), 401
-
-#     prod = Product.query.get(id)
-#     if not prod:
-#         return jsonify({"msg": "Product not found"}), 404
-
-#     # cascade deletes images/attributes if configured, else delete manually
-#     db.session.delete(prod)
-#     db.session.commit()
-
-#     return jsonify({"msg": "Product deleted"}), 200
-
-
-## This api just un-actice the product, remove from visiblity :--
-
 @admin_bp.route('/admin/products/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_product(id):
-    if not get_admin_user():
-        return jsonify({"msg": "Admin access required"}), 401
+    # if not get_admin_user(): return jsonify({"msg": "Admin access required"}), 401
 
     prod = Product.query.get(id)
     if not prod:
         return jsonify({"msg": "Product not found"}), 404
 
-    # Soft delete
-    prod.is_active = False
-    db.session.commit()
+    try:
+        db.session.delete(prod)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"msg": "Cannot delete product (likely has orders)"}), 400
 
-    return jsonify({
-        "msg": "Product disabled successfully",
-        "data": product_to_admin_vue(prod)
-    }), 200
-
+    return jsonify({"msg": "Product deleted successfully"}), 200
 
 
 

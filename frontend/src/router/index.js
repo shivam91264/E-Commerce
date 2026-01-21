@@ -106,32 +106,32 @@ const router = createRouter({
       component: ContactView,
     },
     {
-      path: '/admindashboard',
+      path: '/admin/dashboard',
       name: 'admindashboard',
       component: AdminDashboard,
     },
     {
-      path: '/adminproducts',
+      path: '/admin/products',
       name: 'adminproducts',
       component: AdminProducts,
     },
     {
-      path: '/adminorders',
+      path: '/admin/orders',
       name: 'adminorders',
       component: AdminOrders,
     },
     {
-      path: '/adminusers',
+      path: '/admin/users',
       name: 'adminusers',
       component: AdminUsers,
     },
     {
-      path: '/adminmessages',
+      path: '/admin/messages',
       name: 'adminmessages',
       component: AdminMessages,
     },
     {
-      path: '/adminanalytics',
+      path: '/admin/analytics',
       name: 'adminanalytics',
       component: AdminAnalytics,
     },
