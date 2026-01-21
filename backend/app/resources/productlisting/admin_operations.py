@@ -354,6 +354,7 @@ def export_users():
 
 ## Not tested and not mentioned in  Adminapi.md
 
+# ---------------------- GET USER ADDRESSES ---------------------- #
 @admin_bp.route('/admin/users/<int:user_id>/addresses', methods=['GET'])
 @jwt_required()
 def get_user_addresses(user_id):
@@ -365,16 +366,21 @@ def get_user_addresses(user_id):
         return jsonify({"msg": "User not found"}), 404
 
     # Fetch addresses linked to this user
-    # Ensure your Address model has a 'user_id' foreign key
     addresses = Address.query.filter_by(user_id=user.id).all()
     
     data = []
     for addr in addresses:
-        # Update these fields based on your actual Address model columns
+        # FIX: Combine address_line1 and address_line2 correctly
+        full_address_str = addr.address_line1
+        if addr.address_line2:
+            full_address_str += f", {addr.address_line2}"
+        
+        full_address_str += f", {addr.city}, {addr.state} {addr.zip_code}"
+
         data.append({
             "id": addr.id,
-            "type": getattr(addr, 'address_type', 'Home'), # e.g. Home/Work
-            "address": f"{addr.street_address}, {addr.city}, {addr.state} {addr.zip_code}",
+            "type": addr.label or "Home",  # FIX: Use 'label' from your Model
+            "address": full_address_str,   # FIX: Constructed string
             "country": addr.country
         })
 
@@ -382,7 +388,6 @@ def get_user_addresses(user_id):
         "msg": "User addresses loaded",
         "data": data
     }), 200
-
 
 
 
