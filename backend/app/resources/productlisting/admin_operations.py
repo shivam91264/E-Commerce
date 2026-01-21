@@ -3,6 +3,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 from datetime import datetime
 from app.models.models import db, User, Product, Category, Order, OrderItem, Message, ProductImage, ProductAttribute, Review
+import csv
+from io import StringIO
+from flask import make_response
+from app.models.models import Address  # Ensure Address model is imported
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -165,6 +169,11 @@ def user_to_admin_view(user):
     full_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Unnamed"
     orders_count = db.session.query(func.count(Order.id)).filter(Order.user_id == user.id).scalar()
 
+    # Logic for "Last Login": 
+    # Since User model lacks 'last_login', we use 'updated_at' as a proxy.
+    # If updated_at is None, we default to "Never".
+    last_active = user.updated_at.strftime("%b %d, %H:%M") if user.updated_at else "Never"
+
     return {
         "id": user.id,
         "name": full_name,
@@ -173,24 +182,12 @@ def user_to_admin_view(user):
         "role": "Admin" if user.is_admin else "User",
         "ordersCount": orders_count,
         "active": user.is_active,
-        "joinedDate": user.created_at.strftime("%b %d, %Y") if user.created_at else None
+        "joinedDate": user.created_at.strftime("%b %d, %Y") if user.created_at else None,
+        "last_login": last_active  # <--- Added for Vue Drawer
     }
 
 
 # ---------------------- GET ALL USERS ---------------------- #
-
-
-# @admin_bp.route('/admin/users', methods=['GET'])
-# @jwt_required()
-# def get_all_users():
-#     if not get_admin_user():
-#         return jsonify({"msg": "Admin access required"}), 401
-
-#     users = User.query.order_by(User.created_at.desc()).all()
-#     return jsonify({
-#         "data": [user_to_admin_view(u) for u in users],
-#         "msg": "Users list loaded"
-#     }), 200
 
 
 ## more functional route :--
@@ -314,6 +311,110 @@ def archive_user(user_id):
     return jsonify({"msg": "User archived successfully"}), 200
 
 
+
+
+## Not tested and not mentioned in  Adminapi.md
+
+@admin_bp.route('/admin/users/export', methods=['GET'])
+@jwt_required()
+def export_users():
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    # Fetch all users sorted by newest
+    users = User.query.order_by(User.created_at.desc()).all()
+
+    # Create CSV in memory
+    si = StringIO()
+    cw = csv.writer(si)
+    
+    # CSV Header
+    cw.writerow(['User ID', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Joined Date'])
+
+    # CSV Data
+    for user in users:
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        cw.writerow([
+            user.id,
+            full_name,
+            user.email,
+            user.phone or "N/A",
+            "Admin" if user.is_admin else "User",
+            "Active" if user.is_active else "Blocked",
+            user.created_at.strftime("%Y-%m-%d") if user.created_at else ""
+        ])
+
+    # Create Response
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=users_export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+
+## Not tested and not mentioned in  Adminapi.md
+
+@admin_bp.route('/admin/users/<int:user_id>/addresses', methods=['GET'])
+@jwt_required()
+def get_user_addresses(user_id):
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    # Fetch addresses linked to this user
+    # Ensure your Address model has a 'user_id' foreign key
+    addresses = Address.query.filter_by(user_id=user.id).all()
+    
+    data = []
+    for addr in addresses:
+        # Update these fields based on your actual Address model columns
+        data.append({
+            "id": addr.id,
+            "type": getattr(addr, 'address_type', 'Home'), # e.g. Home/Work
+            "address": f"{addr.street_address}, {addr.city}, {addr.state} {addr.zip_code}",
+            "country": addr.country
+        })
+
+    return jsonify({
+        "msg": "User addresses loaded",
+        "data": data
+    }), 200
+
+
+
+
+## Not tested and not mentioned in  Adminapi.md
+
+@admin_bp.route('/admin/users/<int:user_id>/orders', methods=['GET'])
+@jwt_required()
+def get_user_orders(user_id):
+    if not get_admin_user():
+        return jsonify({"msg": "Admin access required"}), 401
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    # Fetch orders for this specific user
+    orders = Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
+
+    data = []
+    for o in orders:
+        data.append({
+            "id": f"#ORD-{o.id:04d}",
+            "date": o.created_at.strftime("%b %d, %Y"),
+            "total": f"${o.total_amount:.2f}",
+            "status": o.status,
+            "items_count": len(o.items) if o.items else 0
+        })
+
+    return jsonify({
+        "msg": f"Order history for {user.first_name}",
+        "data": data
+    }), 200
 
 
 

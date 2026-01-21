@@ -20,3 +20,8 @@ AdminOrder.vue :--
 GET /admin/orders
 GET /admin/orders/<int:id>
 PUT /admin/orders/<int:id>/status
+
+
+
+AdminUsers.vue :--
+

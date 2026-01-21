@@ -42,7 +42,13 @@
         </div>
 
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden animate-fade-up delay-200">
-          <div class="table-responsive">
+          
+          <div v-if="loading" class="text-center py-5">
+            <div class="spinner-border text-dark" role="status"></div>
+            <p class="text-muted small mt-2">Loading users...</p>
+          </div>
+
+          <div v-else class="table-responsive">
             <table class="table table-hover align-middle mb-0">
               <thead class="bg-light">
                 <tr>
@@ -55,7 +61,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="user in filteredUsers" :key="user.id" class="cursor-pointer" @click="openUserDrawer(user)">
+                <tr v-for="user in users" :key="user.id" class="cursor-pointer" @click="openUserDrawer(user)">
                   
                   <td class="ps-4 py-3">
                     <div class="d-flex align-items-center gap-3">
@@ -70,8 +76,7 @@
                   </td>
                   
                   <td class="py-3 small text-muted">{{ user.email }}</td>
-
-                  <td class="py-3 small text-muted">{{ user.phone }}</td>
+                  <td class="py-3 small text-muted">{{ user.phone || 'N/A' }}</td>
 
                   <td class="py-3 text-center">
                     <span class="badge bg-light text-dark border fw-normal rounded-pill extra-small px-2">
@@ -90,14 +95,17 @@
                       <button class="btn btn-sm btn-white border rounded-circle shadow-sm" title="View Details" @click="openUserDrawer(user)">
                         <i class="bi bi-eye extra-small"></i>
                       </button>
-                      <button class="btn btn-sm btn-white border rounded-circle shadow-sm" :class="user.active ? 'hover-text-danger' : 'hover-text-success'" :title="user.active ? 'Block User' : 'Unblock User'" @click="confirmBlockToggle(user)">
+                      <button v-if="user.role !== 'Admin'" class="btn btn-sm btn-white border rounded-circle shadow-sm" 
+                              :class="user.active ? 'hover-text-danger' : 'hover-text-success'" 
+                              :title="user.active ? 'Block User' : 'Unblock User'" 
+                              @click="confirmBlockToggle(user)">
                         <i :class="user.active ? 'bi bi-slash-circle' : 'bi bi-check-circle'" class="extra-small"></i>
                       </button>
                     </div>
                   </td>
                 </tr>
                 
-                <tr v-if="filteredUsers.length === 0">
+                <tr v-if="users.length === 0">
                   <td colspan="6" class="text-center py-5">
                     <div class="d-inline-flex p-3 rounded-circle bg-light mb-3">
                       <i class="bi bi-person-x text-muted fs-3"></i>
@@ -109,15 +117,26 @@
             </table>
           </div>
           
-          <div class="card-footer bg-white border-top p-3">
+          <div class="card-footer bg-white border-top p-3" v-if="totalPages > 1">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="text-muted extra-small">Showing {{ filteredUsers.length }} users</span>
+              <span class="text-muted extra-small">Showing {{ users.length }} users (Page {{ page }} of {{ totalPages }})</span>
               <nav>
                 <ul class="pagination pagination-sm mb-0 gap-1">
-                  <li class="page-item disabled"><a class="page-link rounded-circle border-0 text-dark" href="#"><i class="bi bi-chevron-left"></i></a></li>
-                  <li class="page-item active"><a class="page-link rounded-circle border-0 bg-dark text-white fw-bold" href="#">1</a></li>
-                  <li class="page-item"><a class="page-link rounded-circle border-0 text-dark" href="#">2</a></li>
-                  <li class="page-item"><a class="page-link rounded-circle border-0 text-dark" href="#"><i class="bi bi-chevron-right"></i></a></li>
+                  <li class="page-item" :class="{ disabled: page === 1 }">
+                    <a class="page-link rounded-circle border-0 text-dark" href="#" @click.prevent="changePage(page - 1)">
+                      <i class="bi bi-chevron-left"></i>
+                    </a>
+                  </li>
+                  
+                  <li class="page-item active">
+                    <span class="page-link rounded-circle border-0 bg-dark text-white fw-bold">{{ page }}</span>
+                  </li>
+                  
+                  <li class="page-item" :class="{ disabled: page >= totalPages }">
+                    <a class="page-link rounded-circle border-0 text-dark" href="#" @click.prevent="changePage(page + 1)">
+                      <i class="bi bi-chevron-right"></i>
+                    </a>
+                  </li>
                 </ul>
               </nav>
             </div>
@@ -151,15 +170,15 @@
           <div class="row g-3">
              <div class="col-12">
                <span class="d-block text-muted extra-small text-uppercase fw-bold">Phone</span>
-               <span class="d-block fw-medium small">{{ selectedUser.phone }}</span>
+               <span class="d-block fw-medium small">{{ selectedUser.phone || 'N/A' }}</span>
              </div>
              <div class="col-6">
                <span class="d-block text-muted extra-small text-uppercase fw-bold">Joined</span>
                <span class="d-block fw-medium small">{{ selectedUser.joinedDate }}</span>
              </div>
              <div class="col-6">
-               <span class="d-block text-muted extra-small text-uppercase fw-bold">Last Login</span>
-               <span class="d-block fw-medium small">2 hours ago</span>
+               <span class="d-block text-muted extra-small text-uppercase fw-bold">Last Active</span>
+               <span class="d-block fw-medium small">{{ selectedUser.last_login }}</span>
              </div>
           </div>
         </div>
@@ -171,12 +190,9 @@
                <span class="small fw-bold"><i class="bi bi-box-seam me-2 text-muted"></i> View Orders</span>
                <i class="bi bi-chevron-right small text-muted"></i>
              </button>
-             <button class="btn btn-white border w-100 text-start d-flex align-items-center justify-content-between p-3 hover-lift">
-               <span class="small fw-bold"><i class="bi bi-geo-alt me-2 text-muted"></i> Saved Addresses</span>
-               <i class="bi bi-chevron-right small text-muted"></i>
-             </button>
              
-             <button class="btn w-100 text-start d-flex align-items-center justify-content-center p-3 mt-3 fw-bold text-uppercase extra-small border" 
+             <button v-if="selectedUser.role !== 'Admin'" 
+                     class="btn w-100 text-start d-flex align-items-center justify-content-center p-3 mt-3 fw-bold text-uppercase extra-small border" 
                      :class="selectedUser.active ? 'btn-outline-danger hover-fill-danger' : 'btn-outline-success hover-fill-success'"
                      @click="confirmBlockToggle(selectedUser)">
                <i :class="selectedUser.active ? 'bi bi-slash-circle me-2' : 'bi bi-check-circle me-2'"></i>
@@ -214,8 +230,8 @@
 </template>
 
 <script>
-/* Global bootstrap variable expected */
-/* eslint-disable no-undef */
+import api from "@/services/api";
+import { Modal, Offcanvas } from 'bootstrap'; // FIX: Explicit Import to prevent crash
 
 export default {
   name: "AdminUsers",
@@ -229,56 +245,104 @@ export default {
       userDrawerInstance: null,
       blockModalInstance: null,
       
-      // Mock Users Data
-      users: [
-        { id: 1, name: "Alex Morgan", email: "alex.morgan@example.com", phone: "+1 (555) 123-4567", role: "User", ordersCount: 12, active: true, joinedDate: "Jan 10, 2025" },
-        { id: 2, name: "Sarah Jenkins", email: "sarah.j@example.com", phone: "+1 (555) 987-6543", role: "User", ordersCount: 5, active: true, joinedDate: "Feb 14, 2025" },
-        { id: 3, name: "Michael Chen", email: "mike.chen@example.com", phone: "+1 (555) 456-7890", role: "Admin", ordersCount: 0, active: true, joinedDate: "Dec 01, 2024" },
-        { id: 4, name: "David Kim", email: "david.k@example.com", phone: "+1 (555) 222-3333", role: "User", ordersCount: 2, active: false, joinedDate: "Mar 05, 2025" },
-        { id: 5, name: "Emily Blunt", email: "emily.b@example.com", phone: "+1 (555) 888-9999", role: "User", ordersCount: 8, active: true, joinedDate: "Jan 22, 2025" },
-      ]
+      users: [], 
+      loading: false,
+      page: 1,
+      totalPages: 1
     };
   },
-  computed: {
-    filteredUsers() {
-      return this.users.filter(u => {
-        const matchesSearch = u.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
-                              u.email.toLowerCase().includes(this.searchQuery.toLowerCase());
-        const matchesStatus = this.filterStatus === "All" || 
-                              (this.filterStatus === "Active" && u.active) || 
-                              (this.filterStatus === "Blocked" && !u.active);
-        const matchesRole = this.filterRole === "All" || u.role === this.filterRole;
-        
-        return matchesSearch && matchesStatus && matchesRole;
-      });
-    }
+  
+  watch: {
+    searchQuery: 'debounceFetch',
+    filterStatus: 'fetchUsers',
+    filterRole: 'fetchUsers',
+    page: 'fetchUsers'
   },
+
   mounted() {
-    if (typeof bootstrap !== 'undefined') {
-      this.userDrawerInstance = new bootstrap.Offcanvas(this.$refs.userDrawer);
-      this.blockModalInstance = new bootstrap.Modal(this.$refs.blockModal);
+    // FIX: Use imported classes instead of window.bootstrap
+    if (this.$refs.userDrawer) {
+      this.userDrawerInstance = new Offcanvas(this.$refs.userDrawer);
     }
+    if (this.$refs.blockModal) {
+      this.blockModalInstance = new Modal(this.$refs.blockModal);
+    }
+    
+    this.fetchUsers();
   },
+  
   methods: {
-    getInitials(name) {
-      return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    async fetchUsers() {
+      this.loading = true;
+      try {
+        const params = {
+          page: this.page,
+          limit: 10,
+          role: this.filterRole === "All" ? undefined : this.filterRole.toLowerCase(),
+          active: this.filterStatus === "All" ? undefined : (this.filterStatus === "Active"),
+          search: this.searchQuery || undefined
+        };
+
+        const response = await api.get('/admin/users', { params });
+        this.users = response.data.data;
+        this.totalPages = response.data.pages || 1;
+        
+      } catch (error) {
+        console.error("Failed to load users", error);
+      } finally {
+        this.loading = false;
+      }
     },
-    openUserDrawer(user) {
-      this.selectedUser = user;
-      this.userDrawerInstance?.show();
+
+    debounceFetch() {
+      clearTimeout(this._timer);
+      this._timer = setTimeout(() => {
+        this.page = 1; 
+        this.fetchUsers();
+      }, 500);
     },
+
     confirmBlockToggle(user) {
       this.actionTarget = user;
       this.blockModalInstance?.show();
     },
-    executeBlockToggle() {
-      if (this.actionTarget) {
-        this.actionTarget.active = !this.actionTarget.active;
-        this.blockModalInstance?.hide();
-        // If drawer is open and looking at this user, force reactivity update (if needed) or close drawer
+
+    async executeBlockToggle() {
+      if (!this.actionTarget) return;
+
+      try {
+        const newStatus = !this.actionTarget.active;
+        
+        await api.put(`/admin/users/${this.actionTarget.id}/status`, {
+          is_active: newStatus
+        });
+
+        this.actionTarget.active = newStatus;
+        
         if (this.selectedUser && this.selectedUser.id === this.actionTarget.id) {
-           this.selectedUser.active = this.actionTarget.active; 
+           this.selectedUser.active = newStatus; 
         }
+
+        this.blockModalInstance?.hide();
+      } catch (error) {
+        alert("Failed to update user status.");
+        console.error(error);
+      }
+    },
+
+    openUserDrawer(user) {
+      this.selectedUser = user;
+      this.userDrawerInstance?.show();
+    },
+
+    getInitials(name) {
+      if (!name) return "U";
+      return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    },
+    
+    changePage(newPage) {
+      if (newPage > 0 && newPage <= this.totalPages) {
+        this.page = newPage;
       }
     }
   }
@@ -286,64 +350,24 @@ export default {
 </script>
 
 <style scoped>
-/* ADMIN THEME STYLES */
-
-/* Backgrounds */
 .bg-light-subtle { background-color: #f9fafb !important; }
-
-/* Typography */
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Animations */
-.animate-fade-up {
-  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
+.animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
-
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Interactions */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.hover-fill-danger:hover {
-  background-color: #dc3545; color: #fff;
-}
-.hover-fill-success:hover {
-  background-color: #198754; color: #fff;
-}
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.hover-fill-danger:hover { background-color: #dc3545; color: #fff; }
+.hover-fill-success:hover { background-color: #198754; color: #fff; }
 .hover-text-danger:hover { color: #dc3545 !important; border-color: #dc3545 !important; }
 .hover-text-success:hover { color: #198754 !important; border-color: #198754 !important; }
-
-/* Table Styling */
 .table-hover tbody tr:hover { background-color: #f8f9fa; }
 .cursor-pointer { cursor: pointer; }
-
-/* Buttons */
-.btn-white {
-  background-color: #fff; color: #000; border-color: #dee2e6;
-}
+.btn-white { background-color: #fff; color: #000; border-color: #dee2e6; }
 .btn-white:hover { border-color: #000; }
-
-/* Forms */
-.form-control:focus, .form-select:focus {
-  background-color: #fff;
-  border: 1px solid #000 !important;
-  box-shadow: none;
-}
-
-/* Shadows */
+.form-control:focus, .form-select:focus { background-color: #fff; border: 1px solid #000 !important; box-shadow: none; }
 .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
 </style>
