@@ -9,6 +9,7 @@ from flask import make_response
 from app.models.models import Address  # Ensure Address model is imported
 
 
+
 admin_bp = Blueprint('admin', __name__)
 
 # ----------------------------------------------------------------------
@@ -752,23 +753,31 @@ def delete_order(id):
 
 STATUS_MAP = ["New", "In Progress", "Resolved", "Archived"]
 
-# Format timestamps like Vue mock data
+
+# Corrected Helper Function
 def format_relative_time(dt):
-    diff = datetime.utcnow() - dt
+    now = datetime.utcnow()
+    diff = now - dt
 
-    if diff.seconds < 60:
+    # 1. Check if it's been more than 24 hours FIRST
+    if diff.days > 0:
+        if diff.days == 1:
+            return "Yesterday"
+        return dt.strftime("%b %d")  # e.g. "Jan 02"
+
+    # 2. If it's less than 24 hours, check seconds
+    seconds = diff.seconds
+
+    if seconds < 60:
         return "Just now"
-    if diff.seconds < 3600:
-        mins = diff.seconds // 60
+    if seconds < 3600:
+        mins = seconds // 60
         return f"{mins} mins ago"
-    if diff.seconds < 86400:
-        hrs = diff.seconds // 3600
-        return f"{hrs} hours ago"
+    
+    # 3. Hours logic
+    hrs = seconds // 3600
+    return f"{hrs} hours ago"
 
-    days = diff.days
-    if days == 1:
-        return "Yesterday"
-    return dt.strftime("%b %d")  # e.g. "Dec 28"
 
 # Full formatted date
 def full_date_format(dt):

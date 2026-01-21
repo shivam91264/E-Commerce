@@ -221,6 +221,8 @@
 <script>
 /* Global bootstrap variable expected from CDN/main.js */
 /* eslint-disable no-undef */
+import api from "@/services/api";
+import { Offcanvas } from 'bootstrap'; // Explicit Import to prevent crash
 
 export default {
   name: "AdminMessages",
@@ -232,53 +234,15 @@ export default {
       selectedMessage: null,
       drawerInstance: null,
       
-      // Mock Data
-      messages: [
-        { 
-          id: 101, 
-          name: "Emily Blunt", 
-          email: "emily.b@example.com", 
-          subject: "Question about shipping to Canada", 
-          message: "Hi there, I was wondering if you offer express shipping to Toronto? I need the items by next Friday for an event. Please let me know the estimated cost.", 
-          date: "10 mins ago", 
-          fullDate: "Dec 30, 2025 at 10:42 AM", 
-          status: "New" 
-        },
-        { 
-          id: 102, 
-          name: "David Kim", 
-          email: "david.k@example.com", 
-          subject: "Received damaged item", 
-          message: "Hello, my order #ORD-8389 arrived today but the vase is cracked. I have attached photos. How do I proceed with a return or exchange?", 
-          date: "2 hours ago", 
-          fullDate: "Dec 30, 2025 at 08:15 AM", 
-          status: "In Progress" 
-        },
-        { 
-          id: 103, 
-          name: "Sarah Jenkins", 
-          email: "sarah.j@example.com", 
-          subject: "Restock inquiry for Linen Chair", 
-          message: "I love the Charcoal Grey Linen Chair but it seems out of stock. Do you have an ETA on when it will be back?", 
-          date: "Yesterday", 
-          fullDate: "Dec 29, 2025 at 04:30 PM", 
-          status: "Resolved" 
-        },
-        { 
-          id: 104, 
-          name: "Michael Chen", 
-          email: "mike.chen@example.com", 
-          subject: "Change shipping address", 
-          message: "I placed an order an hour ago but realized I used my old address. Can you please update it to the new one?", 
-          date: "Dec 28", 
-          fullDate: "Dec 28, 2025 at 11:20 AM", 
-          status: "Archived" 
-        },
-      ]
+      // Real Data Container
+      messages: [], 
+      loading: false
     };
   },
+  
   computed: {
     filteredMessages() {
+      // 1. Filter Logic
       let result = this.messages.filter(msg => {
         const matchesSearch = msg.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
                               msg.email.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
@@ -287,42 +251,85 @@ export default {
         return matchesSearch && matchesStatus;
       });
 
-      // Simple Sort Logic
+      // 2. Sort Logic (Frontend Side)
       if (this.sortOrder === 'Newest') {
-        // Assuming data is already somewhat sorted, or implementing basic sort logic
-        // For real app, sort by timestamp
+         // Assuming API returns sorted by newest, otherwise implement date comparison here
       } else {
-        result = result.reverse();
+         result = result.slice().reverse(); // Create copy and reverse
       }
       
       return result;
     }
   },
+
   mounted() {
-    if (typeof bootstrap !== 'undefined') {
-      this.drawerInstance = new bootstrap.Offcanvas(this.$refs.messageDrawer);
+    // Initialize Bootstrap Drawer
+    if (this.$refs.messageDrawer) {
+      this.drawerInstance = new Offcanvas(this.$refs.messageDrawer);
     }
+    // Fetch initial data
+    this.fetchMessages();
   },
+
   methods: {
-    getInitials(name) {
-      return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    },
-    openMessageDrawer(msg) {
-      this.selectedMessage = msg;
-      // If it's new, auto-mark as In Progress (optional logic, kept manual for now)
-      this.drawerInstance?.show();
-    },
-    updateStatus(msg, newStatus) {
-      msg.status = newStatus;
-      // If updating from drawer, keep drawer open but update UI
-    },
-    archiveAllResolved() {
-      if(confirm("Archive all resolved messages?")) {
-        this.messages.forEach(msg => {
-          if (msg.status === 'Resolved') msg.status = 'Archived';
-        });
+    // --- 1. Fetch Messages ---
+    async fetchMessages() {
+      this.loading = true;
+      try {
+        const response = await api.get('/admin/messages');
+        this.messages = response.data.data;
+      } catch (error) {
+        console.error("Failed to load messages", error);
+      } finally {
+        this.loading = false;
       }
     },
+
+    // --- 2. Update Single Status ---
+    async updateStatus(msg, newStatus) {
+      try {
+        // Optimistic UI update (update immediately for responsiveness)
+        const oldStatus = msg.status;
+        msg.status = newStatus;
+
+        await api.put(`/admin/messages/${msg.id}/status`, { status: newStatus });
+        
+        // If successful, ensure selectedMessage in drawer also reflects this
+        if (this.selectedMessage && this.selectedMessage.id === msg.id) {
+            this.selectedMessage.status = newStatus;
+        }
+      } catch (error) {
+        // Revert on failure
+        msg.status = oldStatus; 
+        alert("Failed to update status");
+      }
+    },
+
+    // --- 3. Bulk Archive ---
+    async archiveAllResolved() {
+      if(!confirm("Archive all resolved messages?")) return;
+      
+      try {
+        await api.put('/admin/messages/archive-resolved');
+        // Refresh list to show changes
+        await this.fetchMessages(); 
+        alert("Messages archived successfully");
+      } catch (error) {
+        alert("Failed to archive messages");
+      }
+    },
+
+    // --- Helper Methods ---
+    getInitials(name) {
+      if(!name) return "U";
+      return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    },
+    
+    openMessageDrawer(msg) {
+      this.selectedMessage = msg;
+      this.drawerInstance?.show();
+    },
+    
     getStatusClass(status) {
       switch(status) {
         case 'New': return 'bg-primary-subtle text-primary border-primary-subtle';

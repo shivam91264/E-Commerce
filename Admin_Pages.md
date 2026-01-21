@@ -25,3 +25,7 @@ PUT /admin/orders/<int:id>/status
 
 AdminUsers.vue :--
 
+GET /admin/users
+GET /admin/users/<user_id>/orders
+GET /admin/users/<user_id>/addresses
+PUT /admin/users/<user_id>/status
