@@ -13,13 +13,13 @@
           
           <div class="col-lg-4 col-xl-3 animate-fade-up delay-100">
             
-            <div class="d-flex align-items-center gap-3 mb-4 d-lg-none">
+            <div class="d-flex align-items-center gap-3 mb-4 d-lg-none" v-if="user">
               <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4" style="width: 60px; height: 60px;">
-                AM
+                {{ userInitials }}
               </div>
               <div>
-                <h6 class="fw-bold mb-0">Alex Morgan</h6>
-                <span class="text-muted small">alex.morgan@example.com</span>
+                <h6 class="fw-bold mb-0">{{ user.name }}</h6>
+                <span class="text-muted small">{{ user.email }}</span>
               </div>
             </div>
 
@@ -75,7 +75,11 @@
 
           <div class="col-lg-8 col-xl-9 animate-fade-up delay-200">
             
-            <div class="card border-0 shadow-sm rounded-4 p-4 p-lg-5 mb-4">
+            <div v-if="loading" class="text-center py-5">
+               <div class="spinner-border text-dark" role="status"></div>
+            </div>
+
+            <div v-else class="card border-0 shadow-sm rounded-4 p-4 p-lg-5 mb-4">
               
               <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-light">
                 <h5 class="fw-bold mb-0">Profile Information</h5>
@@ -87,7 +91,7 @@
               <div v-if="!isEditing" class="row g-4">
                 <div class="col-md-6">
                   <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Full Name</span>
-                  <p class="mb-0 fw-medium">{{ user.name }}</p>
+                  <p class="mb-0 fw-medium">{{ user.name || 'Not set' }}</p>
                 </div>
                 <div class="col-md-6">
                   <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Email Address</span>
@@ -95,15 +99,15 @@
                 </div>
                 <div class="col-md-6">
                   <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Phone Number</span>
-                  <p class="mb-0 fw-medium">{{ user.phone }}</p>
+                  <p class="mb-0 fw-medium">{{ user.phone || 'Not set' }}</p>
                 </div>
                 <div class="col-md-6">
                   <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Gender</span>
-                  <p class="mb-0 fw-medium">{{ user.gender }}</p>
+                  <p class="mb-0 fw-medium">{{ user.gender || 'Not specified' }}</p>
                 </div>
                  <div class="col-md-6">
                   <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Date of Birth</span>
-                  <p class="mb-0 fw-medium">{{ user.dob }}</p>
+                  <p class="mb-0 fw-medium">{{ user.dob || 'Not set' }}</p>
                 </div>
               </div>
 
@@ -124,10 +128,10 @@
                   <div class="col-md-6">
                     <label class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">Gender</label>
                     <select class="form-select bg-light border-0 rounded-1" v-model="editForm.gender">
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Non-binary</option>
-                      <option>Prefer not to say</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
                     </select>
                   </div>
                   <div class="col-md-6">
@@ -137,10 +141,11 @@
                 </div>
 
                 <div class="d-flex gap-3 mt-4 pt-3 border-top border-light">
-                  <button type="submit" class="btn btn-dark rounded-pill px-4 btn-sm fw-bold tracking-wide text-uppercase hover-lift">
+                  <button type="submit" class="btn btn-dark rounded-pill px-4 btn-sm fw-bold tracking-wide text-uppercase hover-lift" :disabled="saving">
+                    <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
                     Save Changes
                   </button>
-                  <button type="button" @click="cancelEdit" class="btn btn-link text-muted text-decoration-none btn-sm fw-bold tracking-wide text-uppercase">
+                  <button type="button" @click="cancelEdit" class="btn btn-link text-muted text-decoration-none btn-sm fw-bold tracking-wide text-uppercase" :disabled="saving">
                     Cancel
                   </button>
                 </div>
@@ -192,106 +197,118 @@
 </template>
 
 <script>
+import api from "@/services/api";
 
 export default {
   name: "ProfileView",
   data() {
     return {
-      activeTab: 'profile', // Controls sidebar active state
+      activeTab: 'profile',
       isEditing: false,
+      loading: true,
+      saving: false,
       
-      // Mock User Data
+      // User Data Structure
       user: {
-        name: "Alex Morgan",
-        email: "alex.morgan@example.com",
-        phone: "+1 (555) 123-4567",
-        gender: "Female",
-        dob: "1995-04-12"
+        name: "",
+        email: "",
+        phone: "",
+        gender: "",
+        dob: ""
       },
       
-      // Clone for editing
       editForm: {}
     };
   },
+  computed: {
+    userInitials() {
+      if (!this.user.name) return 'U';
+      return this.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    }
+  },
+  mounted() {
+    this.fetchUserProfile();
+  },
   methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
-      // this.$router.push({ name: page });
-    },
-    logout() {
-      if(confirm("Are you sure you want to log out?")) {
-        console.log("Logging out...");
-        this.handleNavigation('login');
+    async fetchUserProfile() {
+      this.loading = true;
+      try {
+        const response = await api.get('/user/profile');
+        this.user = response.data.data;
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        if (error.response && error.response.status === 401) {
+          this.$router.push('/login');
+        }
+      } finally {
+        this.loading = false;
       }
     },
+
+    handleNavigation(page) {
+      this.$router.push(`/${page}`);
+    },
+
+    logout() {
+      if(confirm("Are you sure you want to log out?")) {
+        localStorage.removeItem('token'); 
+        this.$router.push('/login');
+      }
+    },
+
     toggleEdit() {
-      this.editForm = { ...this.user }; // Create copy
+      this.editForm = { ...this.user };
+      // Format DOB for date input if necessary (API sends YYYY-MM-DD which works for inputs)
       this.isEditing = true;
     },
+
     cancelEdit() {
       this.isEditing = false;
-      this.editForm = {}; // Clear copy
+      this.editForm = {};
     },
-    saveChanges() {
-      // Simulate API Call
-      this.user = { ...this.editForm };
-      this.isEditing = false;
-      alert("Profile updated successfully.");
+
+    async saveChanges() {
+      this.saving = true;
+      try {
+        const payload = {
+          name: this.editForm.name,
+          phone: this.editForm.phone,
+          gender: this.editForm.gender,
+          dob: this.editForm.dob
+        };
+
+        const response = await api.patch('/user/profile', payload);
+        
+        // Update local user data with response
+        this.user = response.data.data;
+        this.isEditing = false;
+        alert("Profile updated successfully.");
+      } catch (error) {
+        console.error("Failed to update profile:", error);
+        alert("Failed to update profile. Please try again.");
+      } finally {
+        this.saving = false;
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-/* PREMIUM DESIGN SYSTEM */
-
-/* Background */
+/* Reusing your exact styles */
 .bg-light-subtle { background-color: #f9fafb !important; }
-
-/* Typography */
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Form Elements */
-/* Consistent with Login/Register pages */
-.form-control:focus, .form-select:focus {
-  background-color: #fff;
-  border: 1px solid #000 !important;
-  box-shadow: none;
-}
-
-/* Animations */
-.animate-fade-up {
-  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
+.form-control:focus, .form-select:focus { background-color: #fff; border: 1px solid #000 !important; box-shadow: none; }
+.animate-fade-up { animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
-
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Transitions & Interactions */
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 .transition-all { transition: all 0.2s ease; }
-
 .hover-bg-light:hover { background-color: #f8f9fa; color: #000 !important; }
 .hover-bg-danger-subtle:hover { background-color: #fff5f5; color: #dc3545 !important; }
-
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-/* Sticky Sidebar */
-.sticky-lg-top {
-  position: -webkit-sticky;
-  position: sticky;
-  top: 100px;
-}
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.sticky-lg-top { position: -webkit-sticky; position: sticky; top: 100px; }
 </style>

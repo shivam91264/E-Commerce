@@ -9,7 +9,11 @@
           <p class="text-muted mb-0">Review your selection before checkout.</p>
         </div>
 
-        <div v-if="cartItems.length === 0" class="text-center py-5 animate-fade-up">
+        <div v-if="loading" class="text-center py-5">
+           <div class="spinner-border text-dark" role="status"></div>
+        </div>
+
+        <div v-else-if="cartItems.length === 0" class="text-center py-5 animate-fade-up">
           <div class="mb-4">
             <i class="bi bi-bag display-1 text-light"></i>
           </div>
@@ -129,6 +133,7 @@
 
 <script>
 import CartItem from '@/components/CartItem.vue';
+import api from "@/services/api";
 
 export default {
   name: "CartView",
@@ -137,104 +142,91 @@ export default {
   },
   data() {
     return {
-      // Mock Cart Data
-      cartItems: [
-        { 
-          id: 101, 
-          name: "Linen Lounge Chair", 
-          variant: "Charcoal Grey", 
-          price: 299.00, 
-          quantity: 1, 
-          image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=400&q=80" 
-        },
-        { 
-          id: 103, 
-          name: "Minimal Desk Lamp", 
-          variant: "Matte Black", 
-          price: 120.00, 
-          quantity: 2, 
-          image: "https://images.unsplash.com/photo-1507473888900-52e1ad145986?auto=format&fit=crop&w=400&q=80" 
-        },
-        { 
-          id: 104, 
-          name: "Ceramic Vase Set", 
-          variant: "White/Clay", 
-          price: 89.00, 
-          quantity: 1, 
-          image: "https://images.unsplash.com/photo-1612196808214-b7e239e5f6b7?auto=format&fit=crop&w=400&q=80" 
-        }
-      ]
+      cartItems: [],
+      loading: true
     };
   },
   computed: {
     cartCount() {
+      // Calculate total item count (sum of quantities)
       return this.cartItems.reduce((acc, item) => acc + item.quantity, 0);
     },
     subtotal() {
+      // API might return this, but calculating on frontend is safer for instant UI updates
       return this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     }
   },
+  mounted() {
+    this.fetchCart();
+  },
   methods: {
-    updateQuantity(id, newQty) {
-      const item = this.cartItems.find(i => i.id === id);
-      if (item && newQty > 0) {
-        item.quantity = newQty;
+    async fetchCart() {
+      this.loading = true;
+      try {
+        const response = await api.get('/user/cart');
+        // Make sure API response structure matches { data: [...] }
+        this.cartItems = response.data.data; 
+      } catch (error) {
+        console.error("Failed to load cart:", error);
+        if (error.response && error.response.status === 401) {
+           this.$router.push('/login');
+        }
+      } finally {
+        this.loading = false;
       }
     },
-    removeItem(id) {
-      if(confirm('Are you sure you want to remove this item?')) {
-        this.cartItems = this.cartItems.filter(i => i.id !== id);
+
+    async updateQuantity(product_id, newQty) {
+      if (newQty < 1) return;
+      try {
+        // Optimistic UI update
+        const item = this.cartItems.find(i => i.product_id === product_id); // Changed from i.id to i.product_id based on API
+        if (item) item.quantity = newQty;
+
+        await api.put(`/user/cart/${product_id}`, { quantity: newQty });
+        // Optionally fetchCart() again to ensure sync
+      } catch (error) {
+        alert("Failed to update quantity");
+        this.fetchCart(); // Revert on error
       }
     },
+
+    async removeItem(product_id) {
+      if (!confirm('Are you sure you want to remove this item?')) return;
+      
+      try {
+        await api.delete(`/user/cart/${product_id}`);
+        // Remove from local array immediately
+        this.cartItems = this.cartItems.filter(i => i.product_id !== product_id);
+      } catch (error) {
+        alert("Failed to remove item");
+      }
+    },
+
     handleContinueShopping() {
-      // In real app: this.$router.push({ name: 'shop' });
-      console.log("Navigating to Shop");
+      this.$router.push('/shop');
     },
+
     proceedToCheckout() {
-      // In real app: this.$router.push({ name: 'checkout' });
-      console.log("Proceeding to Checkout");
+      this.$router.push('/checkout');
     },
-    navigateToProduct() {
-      console.log("Navigating to PDP");
+
+    navigateToProduct(item) {
+      this.$router.push(`/product/${item.product_id}`);
     }
   }
 };
 </script>
 
 <style scoped>
-/* Typography */
+/* Reused Styles */
 .tracking-tight { letter-spacing: -0.03em; }
 .tracking-wide { letter-spacing: 0.1em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Sticky positioning for summary */
-.sticky-lg-top {
-  position: -webkit-sticky;
-  position: sticky;
-  top: 100px; /* Offset for navbar */
-}
-
-/* Animations */
-.animate-fade-up {
-  animation: fadeUp 0.6s ease-out forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.4s ease-out forwards;
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-/* Mobile Adjustments */
-@media (max-width: 991px) {
-  /* Ensure content doesn't get hidden behind sticky bottom bar */
-  .flex-grow-1 { padding-bottom: 80px; }
-}
+.sticky-lg-top { position: -webkit-sticky; position: sticky; top: 100px; }
+.animate-fade-up { animation: fadeUp 0.6s ease-out forwards; opacity: 0; transform: translateY(20px); }
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+.animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (max-width: 991px) { .flex-grow-1 { padding-bottom: 80px; } }
 </style>
