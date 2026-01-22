@@ -31,12 +31,12 @@
           </button>
 
           <span class="text-muted extra-small text-uppercase tracking-wide d-none d-md-block">
-            Showing {{ filteredProducts.length }} Products
+            Showing {{ products.length }} of {{ totalProducts }} Products
           </span>
 
           <div class="d-flex align-items-center gap-2">
             <span class="text-muted small d-none d-sm-inline">Sort by:</span>
-            <select class="form-select form-select-sm border-0 bg-light rounded-0 fw-bold" style="width: auto; cursor: pointer;" v-model="sortBy">
+            <select class="form-select form-select-sm border-0 bg-light rounded-0 fw-bold" style="width: auto; cursor: pointer;" v-model="sortBy" @change="resetAndFetch">
               <option value="newest">Newest</option>
               <option value="price_low">Price: Low to High</option>
               <option value="price_high">Price: High to Low</option>
@@ -50,7 +50,11 @@
     <main class="flex-grow-1">
       <div class="container-fluid px-lg-5 py-5">
         
-        <div v-if="filteredProducts.length === 0" class="text-center py-5 my-5 animate-fade-up">
+        <div v-if="loading && products.length === 0" class="text-center py-5">
+           <div class="spinner-border text-dark" role="status"></div>
+        </div>
+
+        <div v-else-if="products.length === 0" class="text-center py-5 my-5 animate-fade-up">
           <i class="bi bi-search display-1 text-light mb-3"></i>
           <h3 class="fw-bold">No products found</h3>
           <p class="text-muted">Try adjusting your filters.</p>
@@ -58,7 +62,7 @@
         </div>
 
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4 g-lg-5" v-else>
-          <div class="col" v-for="product in filteredProducts" :key="product.id">
+          <div class="col" v-for="product in products" :key="product.id">
             <ProductCard 
               :product="product" 
               @add-to-cart="handleAddToCart"
@@ -67,9 +71,14 @@
           </div>
         </div>
 
-        <div class="d-flex justify-content-center mt-6 pt-5" v-if="filteredProducts.length > 0">
-          <button class="btn btn-outline-dark rounded-0 px-5 py-3 text-uppercase tracking-wide fw-bold hover-fill">
-            Load More Products
+        <div class="d-flex justify-content-center mt-6 pt-5" v-if="hasMoreProducts">
+          <button 
+            class="btn btn-outline-dark rounded-0 px-5 py-3 text-uppercase tracking-wide fw-bold hover-fill"
+            @click="loadMore"
+            :disabled="loading"
+          >
+            <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+            {{ loading ? 'Loading...' : 'Load More Products' }}
           </button>
         </div>
 
@@ -87,11 +96,19 @@
           <h6 class="fw-bold text-uppercase tracking-wide mb-3 extra-small text-muted">Categories</h6>
           <div class="d-flex flex-wrap gap-2">
             <button 
+              class="btn btn-sm rounded-0 transition-all"
+              :class="selectedCategorySlug === 'all' ? 'btn-dark' : 'btn-outline-secondary'"
+              @click="toggleCategory('all')"
+            >
+              All
+            </button>
+            
+            <button 
               v-for="cat in categories" 
               :key="cat.id" 
               class="btn btn-sm rounded-0 transition-all"
-              :class="selectedCategory === cat.id ? 'btn-dark' : 'btn-outline-secondary'"
-              @click="toggleCategory(cat.id)"
+              :class="selectedCategorySlug === cat.slug ? 'btn-dark' : 'btn-outline-secondary'"
+              @click="toggleCategory(cat.slug)"
             >
               {{ cat.name }}
             </button>
@@ -125,7 +142,7 @@
               <button class="btn btn-outline-dark w-100 rounded-0 py-3 text-uppercase fw-bold" @click="resetFilters">Clear</button>
             </div>
             <div class="col-6">
-              <button class="btn btn-dark w-100 rounded-0 py-3 text-uppercase fw-bold" data-bs-dismiss="offcanvas">Show Results</button>
+              <button class="btn btn-dark w-100 rounded-0 py-3 text-uppercase fw-bold" data-bs-dismiss="offcanvas" @click="resetAndFetch">Show Results</button>
             </div>
           </div>
         </div>
@@ -138,101 +155,151 @@
 
 <script>
 import ProductCard from '@/components/ProductCard.vue';
+import api from "@/services/api";
 
 export default {
   name: "ShopView",
-  components: {
-    ProductCard
-  },
+  components: { ProductCard },
   data() {
     return {
+      products: [],
+      categories: [],
+      loading: false,
+      
+      // Filters
+      selectedCategorySlug: 'all', 
       sortBy: 'newest',
-      selectedCategory: null,
       priceMin: null,
       priceMax: null,
       inStockOnly: false,
       onSaleOnly: false,
-      categories: [
-        { id: 1, name: "Furniture" },
-        { id: 2, name: "Lighting" },
-        { id: 3, name: "Decor" },
-        { id: 4, name: "Electronics" },
-        { id: 5, name: "Accessories" }
-      ],
-      allProducts: [
-        { id: 101, name: "Linen Lounge Chair", category: 1, price: 299, rating: 4.8, image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=600&q=80", badge: "Best Seller" },
-        { id: 102, name: "Ceramic Vase Set", category: 3, price: 89, rating: 4.5, image: "https://images.unsplash.com/photo-1612196808214-b7e239e5f6b7?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 103, name: "Minimal Desk Lamp", category: 2, price: 120, rating: 4.9, image: "https://images.unsplash.com/photo-1507473888900-52e1ad145986?auto=format&fit=crop&w=600&q=80", badge: "" },
-        { id: 104, name: "Leather Tote Bag", category: 5, price: 195, rating: 4.7, image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=600&q=80", badge: "" },
-        { id: 105, name: "Smart Speaker Mini", category: 4, price: 49, rating: 4.2, image: "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?auto=format&fit=crop&w=600&q=80", badge: "Sale" },
-        { id: 106, name: "Oak Coffee Table", category: 1, price: 450, rating: 5.0, image: "https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=600&q=80", badge: "" },
-        { id: 107, name: "Cotton Throw", category: 3, price: 65, rating: 4.4, image: "https://images.unsplash.com/photo-1512914890207-6bf613254978?auto=format&fit=crop&w=600&q=80", badge: "" },
-        { id: 108, name: "Wireless Headphones", category: 4, price: 299, rating: 4.8, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80", badge: "New" },
-      ]
+      
+      // Pagination
+      page: 1,
+      limit: 12,
+      totalProducts: 0
     };
   },
   computed: {
-    filteredProducts() {
-      let result = [...this.allProducts];
-      if (this.selectedCategory) result = result.filter(p => p.category === this.selectedCategory);
-      if (this.onSaleOnly) result = result.filter(p => p.badge === 'Sale');
-      if (this.sortBy === 'price_low') result.sort((a, b) => a.price - b.price);
-      else if (this.sortBy === 'price_high') result.sort((a, b) => b.price - a.price);
-      else if (this.sortBy === 'newest') result.sort((a, b) => b.id - a.id);
-      return result;
+    hasMoreProducts() {
+      return this.products.length < this.totalProducts;
     }
   },
+  watch: {
+    // Immediate: true ensures this runs on initial load AND subsequent changes
+    '$route.query.category': {
+      handler(newSlug) {
+        console.log("Route Changed -> Category Slug:", newSlug);
+        this.selectedCategorySlug = newSlug || 'all';
+        this.resetAndFetch();
+      },
+      immediate: true 
+    }
+  },
+  mounted() {
+    this.fetchCategories();
+    // No need to call fetchProducts() here because the watcher handles it immediately
+  },
   methods: {
-    handleNavigation(page) { console.log("Nav:", page); },
-    toggleCategory(id) { this.selectedCategory = this.selectedCategory === id ? null : id; },
-    handleAddToCart(p) { alert(`Added ${p.name}`); },
-    viewProductDetails(p) { console.log("View:", p.id); },
+    // 1. Fetch Categories for Sidebar
+    async fetchCategories() {
+      try {
+        const res = await api.get('/api/categories');
+        this.categories = res.data.data;
+      } catch (err) {
+        console.error("Categories Error:", err);
+      }
+    },
+
+    // 2. Main Fetch Logic
+    async fetchProducts(append = false) {
+      this.loading = true;
+      try {
+        const params = {
+          page: this.page,
+          limit: this.limit,
+          sort: this.sortBy,
+          price_min: this.priceMin || undefined,
+          price_max: this.priceMax || undefined,
+          in_stock: this.inStockOnly ? 'true' : undefined,
+          on_sale: this.onSaleOnly ? 'true' : undefined
+        };
+
+        const endpoint = `/products/category/${this.selectedCategorySlug}`;
+        console.log(`Fetching: ${endpoint}`, params);
+
+        const res = await api.get(endpoint, { params });
+        
+        if (append) {
+          this.products = [...this.products, ...res.data.data];
+        } else {
+          this.products = res.data.data;
+        }
+        this.totalProducts = res.data.total;
+
+      } catch (err) {
+        console.error("Product Load Error:", err);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // 3. Actions
+    resetAndFetch() {
+      this.page = 1;
+      this.fetchProducts(false);
+    },
+
+    loadMore() {
+      this.page++;
+      this.fetchProducts(true);
+    },
+
+    toggleCategory(slug) {
+      // Updates URL -> Triggers Watcher -> Triggers Fetch
+      const newSlug = this.selectedCategorySlug === slug ? 'all' : slug;
+      this.$router.push({ query: { ...this.$route.query, category: newSlug } });
+    },
+
     resetFilters() {
-      this.selectedCategory = null;
+      this.$router.push({ query: {} }); // Clear URL
+      this.selectedCategorySlug = 'all';
       this.priceMin = null;
       this.priceMax = null;
+      this.inStockOnly = false;
       this.onSaleOnly = false;
       this.sortBy = 'newest';
+      // Watcher will trigger fetch when query clears
+    },
+
+    // 4. Cart & Details
+    async handleAddToCart(product) {
+      try {
+        await api.post(`/user/cart/${product.id}`);
+        // this.$root.$emit('cart-updated'); // Depending on your setup
+        alert("Added to cart");
+      } catch (err) {
+        if(err.response?.status === 401) alert("Please login first");
+        else alert("Failed to add to cart");
+      }
+    },
+
+    viewProductDetails(product) {
+      this.$router.push(`/product/${product.id}`);
     }
   }
 };
 </script>
 
 <style scoped>
-/* PREMIUM DESIGN OVERRIDES */
-
-.shop-hero {
-  height: 40vh; /* Takes up 40% of viewport height */
-  background-color: #000;
-}
-
-/* Typography */
+/* Reused styles */
+.shop-hero { height: 40vh; background-color: #000; }
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Buttons */
-.hover-fill {
-  transition: all 0.3s ease;
-}
-.hover-fill:hover {
-  background-color: #212529;
-  color: #fff;
-}
-
-/* Animations */
-.animate-fade-up {
-  animation: fadeUp 0.8s ease-out forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Remove Form Focus Glow for Cleaner Look */
-.form-control:focus, .form-select:focus {
-  box-shadow: none;
-  border-color: #000;
-}
+.hover-fill { transition: all 0.3s ease; }
+.hover-fill:hover { background-color: #212529; color: #fff; }
+.animate-fade-up { animation: fadeUp 0.8s ease-out forwards; opacity: 0; transform: translateY(20px); }
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+.form-control:focus, .form-select:focus { box-shadow: none; border-color: #000; }
 </style>

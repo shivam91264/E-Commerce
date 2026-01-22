@@ -37,3 +37,14 @@ AdminMessages.vue :--
 GET /admin/messages
 PUT /admin/messages/<int:id>/status
 PUT /admin/messages/archive-resolved
+
+
+
+
+AdminCategories.vue  :--
+
+GET /admin/categories
+GET /admin/categories/dropdown
+POST /admin/categories
+PUT /admin/categories/<int:id>
+DELETE /admin/categories/<int:id>

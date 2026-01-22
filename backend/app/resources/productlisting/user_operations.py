@@ -816,27 +816,42 @@ def get_product_reviews(id):
 #  CategoryView.vue page apis :--
 
 
-##  TESTING DONE
-
 @user_bp.route('/products/category/<string:slug>', methods=['GET'])
 def get_products_by_category(slug):
+    # 1. Grab all Query Params
     sort = request.args.get('sort', 'relevance')
-    page = int(request.args.get('page', 1))
-    limit = int(request.args.get('limit', 12))
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 12, type=int)
+    price_min = request.args.get('price_min', type=float)
+    price_max = request.args.get('price_max', type=float)
+    in_stock = request.args.get('in_stock') # 'true'/'false' string
+    on_sale = request.args.get('on_sale')   # 'true'/'false' string
 
-    # Handle "All" category
-    if slug.lower() == "all":
-        query = Product.query.filter(Product.is_active == True)
-    else:
+    # 2. Base Query
+    query = Product.query.filter(Product.is_active == True)
+
+    # 3. Handle Category Filter
+    if slug.lower() != "all":
         category = Category.query.filter_by(slug=slug).first()
         if not category:
             return jsonify({"msg": "Category not found", "data": []}), 404
-        query = Product.query.filter(
-            Product.category_id == category.id,
-            Product.is_active == True
-        )
+        query = query.filter(Product.category_id == category.id)
 
-    # Sorting
+    # 4. --- APPLY MISSING FILTERS ---
+    if price_min is not None:
+        query = query.filter(Product.price >= price_min)
+    
+    if price_max is not None:
+        query = query.filter(Product.price <= price_max)
+
+    if in_stock == 'true':
+        query = query.filter(Product.stock_quantity > 0)
+
+    if on_sale == 'true':
+        # Assuming 'sale_price' is not Null when on sale
+        query = query.filter(Product.sale_price.isnot(None))
+
+    # 5. Sorting
     if sort == "price_low":
         query = query.order_by(Product.price.asc())
     elif sort == "price_high":
@@ -844,16 +859,17 @@ def get_products_by_category(slug):
     elif sort == "newest":
         query = query.order_by(Product.created_at.desc())
 
+    # 6. Pagination
     pagination = query.paginate(page=page, per_page=limit, error_out=False)
 
     return jsonify({
-        "msg": "Category products fetched",
-        "category": slug,
+        "msg": "Products fetched",
         "total": pagination.total,
         "page": page,
         "pages": pagination.pages,
         "data": [product_to_user_vue(p) for p in pagination.items]
     }), 200
+
 
 
 ##  TESTING DONE  
@@ -869,6 +885,18 @@ def get_category(slug):
         "msg": "Category fetched"
     }), 200
 
+
+
+@user_bp.route('/categories', methods=['GET'])
+def list_navbar_categories():
+    # Fetch all categories, sorted alphabetically
+    categories = Category.query.order_by(Category.name.asc()).all()
+    
+    # Return list using your model's serialize() method
+    return jsonify({
+        "msg": "Categories fetched successfully",
+        "data": [c.serialize() for c in categories] 
+    }), 200
 
 
 
