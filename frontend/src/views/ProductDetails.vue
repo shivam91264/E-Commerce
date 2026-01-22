@@ -69,8 +69,8 @@
                 <p class="text-muted lead fs-6">{{ product.tagline }}</p>
                 
                 <div class="d-flex align-items-center gap-3 mt-3">
-                  <h3 class="fw-bold mb-0">${{ product.price }}</h3>
-                  <span v-if="product.originalPrice" class="text-muted text-decoration-line-through fs-5">${{ product.originalPrice }}</span>
+                  <h3 class="fw-bold mb-0">${{ product.originalPrice || product.price }}</h3>
+                  <span v-if="product.originalPrice" class="text-muted text-decoration-line-through fs-5">${{ product.price }}</span>
                   <span v-if="product.originalPrice" class="badge bg-danger rounded-pill px-3">-{{ discountPercentage }}%</span>
                 </div>
 
@@ -236,7 +236,7 @@
     <div class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up" style="z-index: 10;">
       <div class="d-flex gap-2">
         <div class="d-flex flex-column justify-content-center">
-          <span class="fw-bold small">${{ product.price }}</span>
+          <span class="fw-bold small">${{ product.originalPrice || product.price }}</span>
           <span class="text-muted extra-small text-uppercase">Free Shipping</span>
         </div>
         <button class="btn btn-dark w-100 rounded-pill fw-bold text-uppercase" @click="addToCart">Add to Cart</button>
@@ -248,6 +248,7 @@
 
 <script>
 import ProductCard from '@/components/ProductCard.vue';
+import api from "@/services/api";
 
 export default {
   name: "ProductDetails",
@@ -256,66 +257,92 @@ export default {
   },
   data() {
     return {
+      loading: true,
       quantity: 1,
-      selectedColor: "Charcoal Grey",
+      selectedColor: "",
       currentImage: "",
       product: {
-        id: 101,
-        name: "Linen Lounge Chair",
-        tagline: "Mid-century modern aesthetic meets contemporary comfort.",
-        sku: "FUR-LN-001",
-        price: 299.00,
-        originalPrice: 399.00,
+        id: null,
+        name: "",
+        tagline: "",
+        sku: "",
+        price: 0,
+        originalPrice: null,
         inStock: true,
-        rating: 4.8,
-        reviewCount: 124,
-        badge: "Best Seller",
-        description: "Crafted with precision, the Linen Lounge Chair features a solid oak frame and premium Belgian linen upholstery. Its ergonomic design ensures hours of comfortable seating, while the minimalist silhouette adapts perfectly to any modern living space. The cushions are filled with high-density foam wrapped in down for a plush yet supportive feel.",
-        care: "Vacuum regularly. Blot spills immediately with a clean, dry cloth. Do not use harsh chemicals. Professional cleaning recommended for tough stains.",
-        images: [
-          "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=1200&q=80",
-          "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=1200&q=80",
-          "https://images.unsplash.com/photo-1592078615290-033ee584e267?auto=format&fit=crop&w=1200&q=80",
-          "https://images.unsplash.com/photo-1519947486511-46149fa0a254?auto=format&fit=crop&w=1200&q=80"
-        ],
-        colors: [
-          { name: "Charcoal Grey", hex: "#36454F" },
-          { name: "Oatmeal", hex: "#E0DCC8" },
-          { name: "Navy Blue", hex: "#000080" }
-        ],
-        specs: {
-          "Width": "32 inches",
-          "Depth": "34 inches",
-          "Height": "30 inches",
-          "Seat Height": "17 inches",
-          "Material": "Solid Oak, 100% Linen",
-          "Assembly": "Partial assembly required"
-        }
+        rating: 0,
+        reviewCount: 0,
+        badge: null,
+        description: "",
+        care: "",
+        images: [],
+        colors: [],
+        specs: {}
       },
-      relatedProducts: [
-        { id: 201, name: "Oak Side Table", category: "Furniture", price: 149, image: "https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=600&q=80" },
-        { id: 202, name: "Geometric Rug", category: "Decor", price: 199, image: "https://images.unsplash.com/photo-1575414769150-b828f724ff0c?auto=format&fit=crop&w=600&q=80" },
-        { id: 203, name: "Floor Lamp", category: "Lighting", price: 129, image: "https://images.unsplash.com/photo-1507473888900-52e1ad145986?auto=format&fit=crop&w=600&q=80" },
-        { id: 204, name: "Velvet Cushion", category: "Accessories", price: 45, image: "https://images.unsplash.com/photo-1584100936595-c0654b55a2e6?auto=format&fit=crop&w=600&q=80" },
-        { id: 205, name: "Ceramic Vase", category: "Decor", price: 89, image: "https://images.unsplash.com/photo-1612196808214-b7e239e5f6b7?auto=format&fit=crop&w=600&q=80" },
-        { id: 206, name: "Cotton Throw", category: "Accessories", price: 65, image: "https://images.unsplash.com/photo-1512914890207-6bf613254978?auto=format&fit=crop&w=600&q=80" }
-      ]
+      relatedProducts: []
     };
   },
   computed: {
     discountPercentage() {
+      // UPDATED MATH: ((High - Low) / High) * 100
       if (!this.product.originalPrice) return 0;
-      return Math.round(((this.product.originalPrice - this.product.price) / this.product.originalPrice) * 100);
+      return Math.round(((this.product.price - this.product.originalPrice) / this.product.price) * 100);
     }
   },
-  mounted() {
-    this.currentImage = this.product.images[0];
+  watch: {
+    '$route.params.id': {
+      handler: 'loadPageData',
+      immediate: true
+    }
   },
   methods: {
-    handleNavigation(page) { console.log("Navigating to:", page); },
-    addToCart() { alert(`Added ${this.quantity} x ${this.product.name} (${this.selectedColor}) to cart!`); },
-    handleRelatedAdd(p) { alert(`Added ${p.name} to cart!`); },
-    scrollToReviews() { alert("Scrolling to reviews section..."); },
+    async loadPageData() {
+      this.loading = true;
+      const productId = this.$route.params.id;
+      
+      try {
+        const resProduct = await api.get(`/products/${productId}`);
+        this.product = resProduct.data.data;
+        
+        if (this.product.images.length > 0) this.currentImage = this.product.images[0];
+        if (this.product.colors.length > 0) this.selectedColor = this.product.colors[0].name;
+
+        const resRelated = await api.get(`/products/${productId}/related`);
+        this.relatedProducts = resRelated.data.data;
+
+      } catch (err) {
+        console.error("Failed to load product", err);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async addToCart() {
+      try {
+        await api.post(`/user/cart/${this.product.id}`, { quantity: this.quantity });
+        alert("Added to cart successfully!");
+      } catch (err) {
+        if (err.response && err.response.status === 401) {
+          alert("Please login to add items to cart.");
+          this.$router.push('/login');
+        } else {
+          alert("Failed to add to cart.");
+        }
+      }
+    },
+
+    handleRelatedAdd(p) {
+      this.$router.push(`/product/${p.id}`);
+    },
+
+    handleNavigation(page) {
+      if (page === 'home') this.$router.push('/');
+      if (page === 'shop') this.$router.push('/shop');
+    },
+
+    scrollToReviews() {
+      // Scroll logic implementation
+    },
+
     scrollRelated(direction) {
       const container = this.$refs.relatedScrollContainer;
       const scrollAmount = container.clientWidth * 0.75; 
@@ -388,9 +415,8 @@ export default {
   to { transform: translateY(0); }
 }
 
-/* FIXED: Scroll Arrow Visibility */
 .scroll-arrow {
-  opacity: 1 !important; /* Force visible */
+  opacity: 1 !important; 
   transition: background-color 0.2s;
   background-color: rgba(255, 255, 255, 0.9);
   border: 1px solid #eee;

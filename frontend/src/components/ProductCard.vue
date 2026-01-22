@@ -1,5 +1,8 @@
 <template>
-  <div class="card h-100 border-0 bg-transparent product-card group">
+  <div 
+    class="card h-100 border-0 bg-transparent product-card group cursor-pointer" 
+    @click="$emit('click-product', product)"
+  >
     
     <div class="position-relative overflow-hidden mb-3 bg-light rounded-0 image-wrapper">
       
@@ -12,7 +15,7 @@
       </span>
 
       <img 
-        :src="product.image" 
+        :src="product.image || 'https://via.placeholder.com/300x400'" 
         class="w-100 h-100 object-fit-cover transition-transform" 
         :alt="product.name"
       >
@@ -26,8 +29,7 @@
         </button>
       </div>
       
-      <a href="#" class="stretched-link d-lg-none" @click.prevent="$emit('click-product', product)"></a>
-    </div>
+      </div>
 
     <div class="card-body p-0">
       
@@ -59,18 +61,6 @@
 export default {
   name: "ProductCard",
   props: {
-    /* Expected Object Structure:
-      {
-        id: Number/String,
-        name: String,
-        price: Number,
-        image: String (URL),
-        subtitle: String (Optional),
-        category: String (Optional),
-        badge: String (Optional, e.g., "New", "Sale"),
-        rating: Number (Optional)
-      }
-    */
     product: {
       type: Object,
       required: true
@@ -80,32 +70,25 @@ export default {
 </script>
 
 <style scoped>
-/* PREMIUM DESIGN TOKENS
-  Font: Inter / System UI 
-*/
-
+/* PREMIUM DESIGN TOKENS */
 .tracking-wide { letter-spacing: 0.1em; }
 .extra-small { font-size: 0.75rem; }
 
-/* 1. Aspect Ratio Strategy 
-   We use 3:4 (Portrait) for a fashion/editorial look.
-   Change to 1/1 if you want square images.
-*/
+/* Aspect Ratio */
 .image-wrapper {
   aspect-ratio: 3/4;
   position: relative;
 }
 
-/* 2. Image Zoom Effect */
+/* Image Zoom Effect */
 .transition-transform {
   transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-/* .group refers to the parent container class */
 .group:hover .transition-transform {
   transform: scale(1.05);
 }
 
-/* 3. Hover Overlay Button (Desktop) */
+/* Hover Overlay Button */
 .action-overlay {
   opacity: 0;
   transform: translateY(10px);
@@ -118,7 +101,7 @@ export default {
   transform: translateY(0);
 }
 
-/* 4. Button Styling */
+/* Button Styling */
 .btn-white {
   background-color: rgba(255, 255, 255, 0.95);
   color: #000;
@@ -128,5 +111,10 @@ export default {
 .btn-white:hover {
   background-color: #000;
   color: #fff;
+}
+
+/* Cursor Pointer for Clickability */
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>

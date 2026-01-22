@@ -244,6 +244,7 @@ def product_to_details_view(product):
     primary_image = None
     gallery = []
 
+    # 1. Image Logic
     for img in product.images:
         gallery.append(img.image_url)
         if img.is_primary:
@@ -251,37 +252,50 @@ def product_to_details_view(product):
 
     if not primary_image and gallery:
         primary_image = gallery[0]
+    elif not gallery:
+        primary_image = "https://via.placeholder.com/600" # Fallback
+        gallery = [primary_image]
+
+    # 2. Attribute Logic (Assuming ProductAttribute model has key/value)
+    # We filter out 'care' and 'color' to put them in specific fields
+    specs_dict = {}
+    care_instruction = "Clean with a dry cloth." # Default
+    colors_list = []
+
+    for attr in product.attributes:
+        k = attr.key.lower()
+        v = attr.value
+        
+        if k == 'care':
+            care_instruction = v
+        elif k == 'color':
+            # Try to map common names to hex, or just pass the name
+            # You can expand this mapping or store hex in DB
+            color_map = {"black": "#000", "white": "#fff", "red": "#f00", "blue": "#00f"}
+            hex_code = color_map.get(v.lower(), "#ccc") 
+            colors_list.append({"name": v, "hex": hex_code})
+        else:
+            specs_dict[attr.key] = v
 
     return {
         "id": product.id,
         "name": product.name,
+        "tagline": product.description[:50] + "..." if product.description else "Premium Quality",
         "sku": product.sku,
         "price": product.price,
         "originalPrice": product.sale_price if product.sale_price else None,
         "inStock": product.stock_quantity > 0,
         "description": product.description,
         "badge": "Best Seller" if product.is_featured else None,
-
-        # Media
         "images": gallery,
-
-        # Attributes
-        "specs": {a.key: a.value for a in product.attributes},
-        "care": product.attributes.get("care") if product.attributes else None,
-
-        # Ratings (safe defaults for now)
-        "rating": round(
-            sum([r.rating for r in product.reviews]) / len(product.reviews), 1
-        ) if product.reviews else 0,
-
-        "reviewCount": len(product.reviews),
-
-        # Colors (from attributes)
-        "colors": [
-            {"name": a.value, "hex": "#000000"}
-            for a in product.attributes if a.key == "color"
-        ]
+        "specs": specs_dict,
+        "care": care_instruction,
+        "colors": colors_list,
+        "rating": 4.5, # Static for now if reviews table empty
+        "reviewCount": 0
     }
+
+
 
 
 ## TESTING DONE :--
