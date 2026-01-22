@@ -1,7 +1,19 @@
 <template>
   <div class="d-flex flex-column min-vh-100 bg-white">
     
-    <div class="flex-grow-1 pb-5 mb-5 mb-lg-0">
+    <div v-if="loading" class="flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 50vh;">
+      <div class="spinner-border text-dark" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div v-else-if="!product" class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center py-5">
+      <i class="bi bi-exclamation-circle display-1 text-muted mb-3"></i>
+      <h3>Product Not Found</h3>
+      <button @click="$router.push('/shop')" class="btn btn-dark mt-3 rounded-pill px-4">Back to Shop</button>
+    </div>
+
+    <div v-else class="flex-grow-1 pb-5 mb-5 mb-lg-0">
       
       <div class="container px-lg-5 pt-4 pb-2">
         <nav aria-label="breadcrumb">
@@ -151,21 +163,15 @@
               <div class="accordion accordion-flush border-bottom" id="productAccordion">
                 <div class="accordion-item">
                   <h2 class="accordion-header">
-                    <button class="accordion-button collapsed fw-bold text-uppercase small py-3" type="button" data-bs-toggle="collapse" data-bs-target="#descCollapse">
-                      Description
-                    </button>
+                    <button class="accordion-button collapsed fw-bold text-uppercase small py-3" type="button" data-bs-toggle="collapse" data-bs-target="#descCollapse">Description</button>
                   </h2>
                   <div id="descCollapse" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
-                    <div class="accordion-body text-muted small lh-lg">
-                      {{ product.description }}
-                    </div>
+                    <div class="accordion-body text-muted small lh-lg">{{ product.description }}</div>
                   </div>
                 </div>
                 <div class="accordion-item">
                   <h2 class="accordion-header">
-                    <button class="accordion-button collapsed fw-bold text-uppercase small py-3" type="button" data-bs-toggle="collapse" data-bs-target="#specsCollapse">
-                      Dimensions & Specs
-                    </button>
+                    <button class="accordion-button collapsed fw-bold text-uppercase small py-3" type="button" data-bs-toggle="collapse" data-bs-target="#specsCollapse">Dimensions & Specs</button>
                   </h2>
                   <div id="specsCollapse" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
                     <div class="accordion-body text-muted small">
@@ -182,14 +188,10 @@
                 </div>
                 <div class="accordion-item">
                   <h2 class="accordion-header">
-                    <button class="accordion-button collapsed fw-bold text-uppercase small py-3" type="button" data-bs-toggle="collapse" data-bs-target="#careCollapse">
-                      Care Instructions
-                    </button>
+                    <button class="accordion-button collapsed fw-bold text-uppercase small py-3" type="button" data-bs-toggle="collapse" data-bs-target="#careCollapse">Care Instructions</button>
                   </h2>
                   <div id="careCollapse" class="accordion-collapse collapse" data-bs-parent="#productAccordion">
-                    <div class="accordion-body text-muted small lh-lg">
-                      {{ product.care }}
-                    </div>
+                    <div class="accordion-body text-muted small lh-lg">{{ product.care }}</div>
                   </div>
                 </div>
               </div>
@@ -206,26 +208,23 @@
         </div>
         
         <div class="position-relative">
-          
-          <button 
-            class="btn btn-light rounded-circle shadow-sm position-absolute top-50 start-0 translate-middle-y ms-n3 z-2 d-none d-md-flex align-items-center justify-content-center scroll-arrow"
-            style="width: 40px; height: 40px;"
-            @click="scrollRelated('left')"
-          >
+          <button class="btn btn-light rounded-circle shadow-sm position-absolute top-50 start-0 translate-middle-y ms-n3 z-2 d-none d-md-flex align-items-center justify-content-center scroll-arrow" style="width: 40px; height: 40px;" @click="scrollRelated('left')">
             <i class="bi bi-chevron-left"></i>
           </button>
           
           <div class="row flex-nowrap overflow-auto hide-scrollbar pb-3 g-4" ref="relatedScrollContainer" style="scroll-behavior: smooth;">
             <div class="col-10 col-md-4 col-lg-3" style="flex: 0 0 auto;" v-for="related in relatedProducts" :key="related.id">
-              <ProductCard :product="related" @add-to-cart="handleRelatedAdd" />
+              
+              <ProductCard 
+                :product="related" 
+                @click-product="handleRelatedClick" 
+                @add-to-cart="addToCart" 
+              />
+
             </div>
           </div>
 
-          <button 
-            class="btn btn-light rounded-circle shadow-sm position-absolute top-50 end-0 translate-middle-y me-n3 z-2 d-none d-md-flex align-items-center justify-content-center scroll-arrow"
-            style="width: 40px; height: 40px;"
-            @click="scrollRelated('right')"
-          >
+          <button class="btn btn-light rounded-circle shadow-sm position-absolute top-50 end-0 translate-middle-y me-n3 z-2 d-none d-md-flex align-items-center justify-content-center scroll-arrow" style="width: 40px; height: 40px;" @click="scrollRelated('right')">
             <i class="bi bi-chevron-right"></i>
           </button>
         </div>
@@ -233,7 +232,7 @@
 
     </div>
 
-    <div class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up" style="z-index: 10;">
+    <div v-if="product" class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up" style="z-index: 10;">
       <div class="d-flex gap-2">
         <div class="d-flex flex-column justify-content-center">
           <span class="fw-bold small">${{ product.originalPrice || product.price }}</span>
@@ -283,7 +282,7 @@ export default {
   },
   computed: {
     discountPercentage() {
-      // UPDATED MATH: ((High - Low) / High) * 100
+      // Swapped logic: ((Price - OriginalPrice) / Price)
       if (!this.product.originalPrice) return 0;
       return Math.round(((this.product.price - this.product.originalPrice) / this.product.price) * 100);
     }
@@ -330,8 +329,10 @@ export default {
       }
     },
 
-    handleRelatedAdd(p) {
+    // 1. Navigation Handler
+    handleRelatedClick(p) {
       this.$router.push(`/product/${p.id}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top when changing products
     },
 
     handleNavigation(page) {
@@ -340,7 +341,7 @@ export default {
     },
 
     scrollToReviews() {
-      // Scroll logic implementation
+      // Logic for scrolling to review section
     },
 
     scrollRelated(direction) {
