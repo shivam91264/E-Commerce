@@ -82,7 +82,7 @@
                  </template>
               <template v-else>
                 <li><router-link class="dropdown-item" to="/profile">My Profile</router-link></li>
-                <li><router-link class="dropdown-item" to="/orders">My Orders</router-link></li>
+                <li><router-link class="dropdown-item" to="/order">My Orders</router-link></li>
                 <li><router-link class="dropdown-item" to="/wishlist">Wishlist</router-link></li>
               </template>
               <li><hr class="dropdown-divider"></li>

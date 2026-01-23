@@ -38,7 +38,7 @@
                 <a href="#" 
                    class="list-group-item list-group-item-action border-0 rounded-3 d-flex align-items-center gap-3 py-3 px-3 mb-1 transition-all"
                    :class="activeTab === 'orders' ? 'bg-dark text-white fw-bold' : 'text-muted hover-bg-light'"
-                   @click.prevent="handleNavigation('orders')"
+                   @click.prevent="handleNavigation('order')"
                 >
                   <i class="bi bi-box-seam fs-5"></i>
                   <span class="small text-uppercase tracking-wide">Order History</span>
