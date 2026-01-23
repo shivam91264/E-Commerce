@@ -20,13 +20,27 @@
           <div class="col-lg-7">
             
             <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-              <div class="card-header bg-white p-4 border-bottom">
+              <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
                   <i class="bi bi-geo-alt text-muted"></i> Shipping Address
                 </h5>
+                
+                <div class="dropdown" v-if="savedAddresses.length > 0">
+                  <button class="btn btn-outline-dark btn-sm rounded-pill dropdown-toggle px-3" type="button" data-bs-toggle="dropdown">
+                    Use Saved Address
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end border-0 shadow p-2" style="max-height: 300px; overflow-y: auto;">
+                    <li v-for="addr in savedAddresses" :key="addr.id">
+                      <button class="dropdown-item small rounded-2 py-2 mb-1" @click="selectAddress(addr)">
+                        <strong>{{ addr.label }}</strong> - {{ addr.line1 }}, {{ addr.city }}
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
+
               <div class="card-body p-4">
-                <AddressForm />
+                <AddressForm v-model="shippingData" />
               </div>
             </div>
 
@@ -37,8 +51,8 @@
                 </h5>
               </div>
               <div class="card-body p-4">
-                <div class="form-check p-3 border rounded-2 mb-2 bg-light-hover cursor-pointer selected-radio">
-                  <input class="form-check-input" type="radio" name="delivery" id="std" checked>
+                <div class="form-check p-3 border rounded-2 mb-2 bg-light-hover cursor-pointer" :class="{ 'selected-radio': deliveryMethod === 'standard' }">
+                  <input class="form-check-input" type="radio" name="delivery" id="std" value="standard" v-model="deliveryMethod">
                   <label class="form-check-label d-flex justify-content-between w-100 cursor-pointer" for="std">
                     <span>
                       <span class="d-block fw-bold text-dark">Standard Delivery</span>
@@ -47,8 +61,8 @@
                     <span class="fw-bold">Free</span>
                   </label>
                 </div>
-                <div class="form-check p-3 border rounded-2 bg-light-hover cursor-pointer">
-                  <input class="form-check-input" type="radio" name="delivery" id="exp">
+                <div class="form-check p-3 border rounded-2 bg-light-hover cursor-pointer" :class="{ 'selected-radio': deliveryMethod === 'express' }">
+                  <input class="form-check-input" type="radio" name="delivery" id="exp" value="express" v-model="deliveryMethod">
                   <label class="form-check-label d-flex justify-content-between w-100 cursor-pointer" for="exp">
                     <span>
                       <span class="d-block fw-bold text-dark">Express Shipping</span>
@@ -67,14 +81,21 @@
                 </h5>
               </div>
               <div class="card-body p-4">
-                <PaymentOptions />
+                <PaymentOptions v-model="paymentMethod" />
               </div>
             </div>
 
           </div>
 
           <div class="col-lg-5">
-            <OrderSummary />
+            <OrderSummary 
+              :subtotal="summary.subtotal" 
+              :shipping="shippingCost" 
+              :total="grandTotal" 
+              :items="summary.items"
+              :loading="loading"
+              @place-order="placeOrder" 
+            />
             
             <div class="mt-4 text-center text-muted">
               <div class="d-flex justify-content-center gap-4 mb-3 opacity-50">
@@ -95,10 +116,15 @@
     <div class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up z-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="text-muted small">Total to pay</span>
-        <span class="fw-bold fs-5">$329.00</span>
+        <span class="fw-bold fs-5">${{ grandTotal.toFixed(2) }}</span>
       </div>
-      <button class="btn btn-dark w-100 py-3 rounded-pill text-uppercase fw-bold tracking-wide" @click="placeOrder">
-        Place Order
+      <button 
+        class="btn btn-dark w-100 py-3 rounded-pill text-uppercase fw-bold tracking-wide" 
+        @click="placeOrder"
+        :disabled="placingOrder"
+      >
+        <span v-if="placingOrder" class="spinner-border spinner-border-sm me-2"></span>
+        {{ placingOrder ? 'Processing...' : 'Place Order' }}
       </button>
     </div>
 
@@ -109,6 +135,7 @@
 import AddressForm from '@/components/checkout/AddressForm.vue';
 import PaymentOptions from '@/components/checkout/PaymentOptions.vue';
 import OrderSummary from '@/components/checkout/OrderSummary.vue';
+import api from "@/services/api";
 
 export default {
   name: "CheckoutView",
@@ -117,31 +144,136 @@ export default {
     PaymentOptions,
     OrderSummary
   },
+  data() {
+    return {
+      loading: true,
+      placingOrder: false,
+      
+      // Form Inputs
+      deliveryMethod: 'standard',
+      paymentMethod: 'COD',
+      shippingData: {
+        full_name: '',
+        phone: '',
+        address_line1: '',
+        address_line2: '',
+        city: '',
+        state: '',
+        zip_code: '',
+        country: 'United States'
+      },
+      
+      // Data from API
+      savedAddresses: [],
+      summary: {
+        subtotal: 0,
+        items: []
+      }
+    };
+  },
+  computed: {
+    shippingCost() {
+      return this.deliveryMethod === 'express' ? 15.00 : 0;
+    },
+    grandTotal() {
+      return this.summary.subtotal + this.shippingCost;
+    }
+  },
+  mounted() {
+    this.fetchCheckoutSummary();
+    this.fetchSavedAddresses();
+  },
   methods: {
-    placeOrder() {
-      // In real app, trigger form validation then submit
-      alert("Processing your order secure...");
+    // 1. Fetch Cart/Summary
+    async fetchCheckoutSummary() {
+      this.loading = true;
+      try {
+        const res = await api.get('/user/checkout/summary');
+        this.summary = res.data;
+      } catch (err) {
+        console.error("Summary error", err);
+        if (err.response && err.response.status === 400) {
+           this.$router.push('/cart'); // Empty cart
+        }
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // 2. Fetch Addresses
+    async fetchSavedAddresses() {
+      try {
+        const res = await api.get('/user/addresses');
+        this.savedAddresses = res.data.data;
+        
+        // Auto-select default
+        const defaultAddr = this.savedAddresses.find(a => a.isDefault);
+        if (defaultAddr) this.selectAddress(defaultAddr);
+      } catch (err) {
+        console.error("Address error", err);
+      }
+    },
+
+    // 3. Map Saved Address to Form
+    selectAddress(addr) {
+      this.shippingData = {
+        full_name: addr.name,
+        phone: addr.phone,
+        address_line1: addr.line1,
+        address_line2: addr.line2,
+        city: addr.city,
+        state: addr.state,
+        zip_code: addr.zip,
+        country: addr.country
+      };
+    },
+
+    // 4. Submit Order
+    async placeOrder() {
+      if (!this.shippingData.full_name || !this.shippingData.address_line1 || !this.shippingData.city) {
+        alert("Please complete the shipping address.");
+        return;
+      }
+
+      this.placingOrder = true;
+
+      try {
+        const payload = {
+          delivery_method: this.deliveryMethod,
+          payment_method: this.paymentMethod,
+          
+          shipping_full_name: this.shippingData.full_name,
+          shipping_address: `${this.shippingData.address_line1} ${this.shippingData.address_line2 || ''}`,
+          shipping_city: this.shippingData.city,
+          shipping_zip: this.shippingData.zip_code,
+          shipping_country: this.shippingData.country
+        };
+
+        const res = await api.post('/user/orders', payload);
+        
+        this.$router.push({ 
+          name: 'ordersuccess', 
+          query: { orderId: res.data.order_id } 
+        });
+
+      } catch (err) {
+        alert(err.response?.data?.msg || "Order failed");
+      } finally {
+        this.placingOrder = false;
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-/* Page Styles */
+/* Keeping your existing styles */
 .bg-light-subtle { background-color: #f9fafb !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Radio Selection Styles */
 .bg-light-hover:hover { background-color: #f8f9fa; }
-.form-check-input:checked + label { color: #000; }
-.selected-radio {
-  background-color: #f8f9fa;
-  border-color: #000 !important;
-}
-
-/* Animations */
+.selected-radio { background-color: #f8f9fa; border-color: #000 !important; }
 .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>
