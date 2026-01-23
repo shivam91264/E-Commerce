@@ -4,7 +4,11 @@
     <div class="flex-grow-1 py-5">
       <div class="container px-lg-5">
         
-        <div class="row justify-content-center">
+        <div v-if="loading" class="text-center py-5">
+           <div class="spinner-border text-dark" role="status"></div>
+        </div>
+
+        <div v-else-if="order" class="row justify-content-center">
           <div class="col-lg-8 col-xl-6">
             
             <div class="text-center mb-5 animate-fade-up">
@@ -26,11 +30,11 @@
                 <div class="row align-items-center g-3">
                   <div class="col-6">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide mb-1">Order ID</span>
-                    <span class="fw-bold font-monospace">{{ order.id }}</span>
+                    <span class="fw-bold font-monospace">{{ order.orderNumber }}</span>
                   </div>
                   <div class="col-6 text-end">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide mb-1">Date</span>
-                    <span class="fw-bold">{{ order.date }}</span>
+                    <span class="fw-bold">{{ order.orderDate }}</span>
                   </div>
                 </div>
               </div>
@@ -72,7 +76,7 @@
                 <div class="mb-4">
                   <div v-for="item in order.items" :key="item.id" class="d-flex align-items-center gap-3 mb-3">
                     <div class="position-relative" style="width: 50px; height: 50px;">
-                      <img :src="item.image" :alt="item.name" class="w-100 h-100 object-fit-cover rounded-2 border">
+                      <img :src="item.image || 'https://via.placeholder.com/100'" :alt="item.name" class="w-100 h-100 object-fit-cover rounded-2 border">
                       <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary text-white border border-white" style="font-size: 0.6rem;">{{ item.quantity }}</span>
                     </div>
                     <div class="flex-grow-1">
@@ -88,11 +92,11 @@
                 <div class="row g-4 mb-2">
                   <div class="col-md-6">
                     <h6 class="fw-bold small text-uppercase tracking-wide text-muted mb-2">Shipping Address</h6>
-                    <address class="small text-dark mb-0 lh-sm fst-normal">
+                    <address class="small text-dark mb-0 lh-sm fst-normal" v-if="order.shippingAddress">
                       {{ order.customerName }}<br>
-                      {{ order.address.street }}<br>
-                      {{ order.address.city }}, {{ order.address.state }} {{ order.address.zip }}<br>
-                      {{ order.address.country }}
+                      {{ order.shippingAddress.street }}<br>
+                      {{ order.shippingAddress.city }}, {{ order.shippingAddress.zip }}<br>
+                      {{ order.shippingAddress.country }}
                     </address>
                   </div>
                   <div class="col-md-6">
@@ -103,7 +107,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary border-opacity-10">
                       <span class="fw-bold small">Total Paid</span>
-                      <span class="fw-bold fs-5">${{ order.total }}</span>
+                      <span class="fw-bold fs-5">${{ order.total.toFixed(2) }}</span>
                     </div>
                   </div>
                 </div>
@@ -139,88 +143,66 @@
 </template>
 
 <script>
+import api from "@/services/api";
 
 export default {
   name: "OrderSuccessView",
   data() {
     return {
-      order: {
-        id: "ORD-2025-8392",
-        date: "Dec 30, 2025",
-        customerName: "Alex Morgan",
-        estimatedDelivery: "Jan 05, 2026 - Jan 07, 2026",
-        total: "329.00",
-        address: {
-          street: "123 Market Street, Suite 400",
-          city: "San Francisco",
-          state: "CA",
-          zip: "94103",
-          country: "United States"
-        },
-        items: [
-          { id: 101, name: "Linen Lounge Chair", variant: "Charcoal Grey", price: 299.00, quantity: 1, image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=100&q=80" },
-          { id: 104, name: "Ceramic Vase Set", variant: "White/Clay", price: 89.00, quantity: 1, image: "https://images.unsplash.com/photo-1612196808214-b7e239e5f6b7?auto=format&fit=crop&w=100&q=80" }
-        ]
-      }
+      loading: true,
+      order: null // Data will come from API
     };
   },
+  mounted() {
+    this.fetchOrderDetails();
+  },
   methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
-      // this.$router.push({ name: page });
+    async fetchOrderDetails() {
+      // Get Order ID from URL query: ?orderId=123
+      const orderId = this.$route.query.orderId;
+      
+      if (!orderId) {
+        this.$router.push('/'); // Redirect home if no ID
+        return;
+      }
+
+      try {
+        const res = await api.get(`/user/orders/${orderId}/success`);
+        this.order = res.data.data;
+      } catch (err) {
+        console.error("Failed to load order success details", err);
+        // Optional: Redirect to error page
+      } finally {
+        this.loading = false;
+      }
     },
+
+    handleNavigation(page) {
+      this.$router.push(`/${page}`);
+    },
+    
     handleTrackOrder() {
-      alert(`Tracking order ${this.order.id}...`);
+      // Redirect to orders history page
+      this.$router.push('/order');
     }
   }
 };
 </script>
 
 <style scoped>
-/* PREMIUM DESIGN SYSTEM */
-
-/* Layout & Background */
+/* Reused Styles */
 .bg-light-subtle { background-color: #f9fafb !important; }
 .tracking-tight { letter-spacing: -0.03em; }
 .tracking-wide { letter-spacing: 0.1em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Animations */
-.animate-fade-up {
-  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
-
+.animate-fade-up { animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
 .delay-300 { animation-delay: 0.3s; }
-
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Button Interactions */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.hover-underline:hover {
-  text-decoration: underline !important;
-}
-
-/* Card Styling */
-.card {
-  box-shadow: 0 10px 30px rgba(0,0,0,0.04) !important;
-}
-
-/* Progress Bar Tweaks */
-.progress {
-  overflow: visible;
-  background-color: #e9ecef;
-}
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.hover-underline:hover { text-decoration: underline !important; }
+.card { box-shadow: 0 10px 30px rgba(0,0,0,0.04) !important; }
+.progress { overflow: visible; background-color: #e9ecef; }
 </style>

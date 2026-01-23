@@ -176,7 +176,8 @@ export default {
       return this.deliveryMethod === 'express' ? 15.00 : 0;
     },
     grandTotal() {
-      return this.summary.subtotal + this.shippingCost;
+      // Ensure values are safe to add
+      return (this.summary.subtotal || 0) + this.shippingCost;
     }
   },
   mounted() {
@@ -184,7 +185,7 @@ export default {
     this.fetchSavedAddresses();
   },
   methods: {
-    // 1. Fetch Cart/Summary
+    // 1. Fetch Cart Data
     async fetchCheckoutSummary() {
       this.loading = true;
       try {
@@ -192,8 +193,9 @@ export default {
         this.summary = res.data;
       } catch (err) {
         console.error("Summary error", err);
+        // If cart is empty (API returns 400 or data suggests empty), redirect
         if (err.response && err.response.status === 400) {
-           this.$router.push('/cart'); // Empty cart
+           this.$router.push('/cart');
         }
       } finally {
         this.loading = false;
@@ -206,7 +208,7 @@ export default {
         const res = await api.get('/user/addresses');
         this.savedAddresses = res.data.data;
         
-        // Auto-select default
+        // Auto-select default if exists
         const defaultAddr = this.savedAddresses.find(a => a.isDefault);
         if (defaultAddr) this.selectAddress(defaultAddr);
       } catch (err) {
@@ -214,7 +216,7 @@ export default {
       }
     },
 
-    // 3. Map Saved Address to Form
+    // 3. Auto-fill logic
     selectAddress(addr) {
       this.shippingData = {
         full_name: addr.name,
@@ -228,10 +230,10 @@ export default {
       };
     },
 
-    // 4. Submit Order
+    // 4. Place Order (Robust Error Handling)
     async placeOrder() {
       if (!this.shippingData.full_name || !this.shippingData.address_line1 || !this.shippingData.city) {
-        alert("Please complete the shipping address.");
+        alert("Please complete the shipping address form.");
         return;
       }
 
@@ -251,13 +253,23 @@ export default {
 
         const res = await api.post('/user/orders', payload);
         
-        this.$router.push({ 
-          name: 'ordersuccess', 
-          query: { orderId: res.data.order_id } 
-        });
+        // Ensure we have a valid Order ID before redirecting
+        if (res.data && res.data.order_id) {
+          this.$router.push({ 
+            name: 'ordersuccess', 
+            query: { orderId: res.data.order_id } 
+          });
+        } else {
+          console.error("Order ID missing in response", res.data);
+          alert("Order Placed, but redirect failed. Check your Orders page.");
+          this.$router.push('/order'); // Fallback redirect
+        }
 
       } catch (err) {
-        alert(err.response?.data?.msg || "Order failed");
+        console.error("Order failed:", err);
+        // Display specific API error message if available
+        const msg = err.response?.data?.msg || err.message || "Failed to place order.";
+        alert(`Order Failed: ${msg}`);
       } finally {
         this.placingOrder = false;
       }
@@ -267,7 +279,7 @@ export default {
 </script>
 
 <style scoped>
-/* Keeping your existing styles */
+/* Styles */
 .bg-light-subtle { background-color: #f9fafb !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
