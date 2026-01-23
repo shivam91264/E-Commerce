@@ -15,7 +15,11 @@
           </button>
         </div>
 
-        <div v-if="addresses.length === 0" class="text-center py-6 animate-fade-up">
+        <div v-if="loading" class="text-center py-5">
+           <div class="spinner-border text-dark" role="status"></div>
+        </div>
+
+        <div v-else-if="addresses.length === 0" class="text-center py-6 animate-fade-up">
           <div class="bg-white d-inline-flex p-4 rounded-circle shadow-sm mb-4">
             <i class="bi bi-geo-alt display-4 text-muted opacity-25"></i>
           </div>
@@ -45,14 +49,15 @@
                 <span v-if="addr.isDefault" class="badge bg-dark text-white fw-bold text-uppercase extra-small tracking-wide px-2 py-1">
                   Default
                 </span>
+                
                 <div class="dropdown" v-if="!addr.isDefault">
-                   <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
-                     <i class="bi bi-three-dots"></i>
-                   </button>
-                   <ul class="dropdown-menu border-0 shadow-lg rounded-3 p-2">
-                     <li><button class="dropdown-item rounded-2 small" @click="setAsDefault(addr.id)">Set as Default</button></li>
-                     <li><button class="dropdown-item rounded-2 small text-danger" @click="deleteAddress(addr.id)">Delete</button></li>
-                   </ul>
+                    <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="z-index: 1050;">
+                      <li><button class="dropdown-item rounded-2 small" @click="setAsDefault(addr.id)">Set as Default</button></li>
+                      <li><button class="dropdown-item rounded-2 small text-danger" @click="deleteAddress(addr.id)">Delete</button></li>
+                    </ul>
                 </div>
               </div>
 
@@ -125,6 +130,8 @@
                   <option>CA</option>
                   <option>NY</option>
                   <option>TX</option>
+                  <option>MH</option>
+                  <option>DL</option>
                   </select>
               </div>
               <div class="col-md-3">
@@ -133,17 +140,17 @@
               </div>
 
               <div class="col-12">
-                 <label class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">Address Type</label>
-                 <div class="d-flex gap-2">
-                    <input type="radio" class="btn-check" name="addrType" id="typeHome" value="Home" v-model="form.label">
-                    <label class="btn btn-outline-light text-dark border fw-bold text-uppercase extra-small rounded-pill px-4" for="typeHome">Home</label>
+                  <label class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">Address Type</label>
+                  <div class="d-flex gap-2">
+                     <input type="radio" class="btn-check" name="addrType" id="typeHome" value="Home" v-model="form.label">
+                     <label class="btn btn-outline-light text-dark border fw-bold text-uppercase extra-small rounded-pill px-4" for="typeHome">Home</label>
 
-                    <input type="radio" class="btn-check" name="addrType" id="typeWork" value="Work" v-model="form.label">
-                    <label class="btn btn-outline-light text-dark border fw-bold text-uppercase extra-small rounded-pill px-4" for="typeWork">Work</label>
-                    
-                    <input type="radio" class="btn-check" name="addrType" id="typeOther" value="Other" v-model="form.label">
-                    <label class="btn btn-outline-light text-dark border fw-bold text-uppercase extra-small rounded-pill px-4" for="typeOther">Other</label>
-                 </div>
+                     <input type="radio" class="btn-check" name="addrType" id="typeWork" value="Work" v-model="form.label">
+                     <label class="btn btn-outline-light text-dark border fw-bold text-uppercase extra-small rounded-pill px-4" for="typeWork">Work</label>
+                     
+                     <input type="radio" class="btn-check" name="addrType" id="typeOther" value="Other" v-model="form.label">
+                     <label class="btn btn-outline-light text-dark border fw-bold text-uppercase extra-small rounded-pill px-4" for="typeOther">Other</label>
+                  </div>
               </div>
 
               <div class="col-12 mt-4 pt-3 border-top">
@@ -163,8 +170,8 @@
 </template>
 
 <script>
-/* Global Bootstrap instance required for Modal control */
 /* eslint-disable no-undef */
+import api from "@/services/api";
 
 export default {
   name: "AddressesView",
@@ -172,6 +179,7 @@ export default {
     return {
       isEditing: false,
       bsModal: null,
+      loading: true,
       form: {
         id: null,
         name: "",
@@ -184,47 +192,32 @@ export default {
         country: "United States",
         label: "Home"
       },
-      addresses: [
-        {
-          id: 1,
-          name: "Alex Morgan",
-          phone: "+1 (555) 123-4567",
-          line1: "123 Market Street",
-          line2: "Suite 400",
-          city: "San Francisco",
-          state: "CA",
-          zip: "94103",
-          country: "United States",
-          label: "Home",
-          isDefault: true
-        },
-        {
-          id: 2,
-          name: "Alex Morgan (Office)",
-          phone: "+1 (555) 987-6543",
-          line1: "4500 Tech Plaza",
-          line2: "Floor 12",
-          city: "New York",
-          state: "NY",
-          zip: "10001",
-          country: "United States",
-          label: "Work",
-          isDefault: false
-        }
-      ]
+      addresses: [] // Will fetch from API
     };
   },
   mounted() {
-    // Initialize Bootstrap Modal
-    // Ensure bootstrap.js is loaded in index.html or main.js
     if (typeof bootstrap !== 'undefined') {
       this.bsModal = new bootstrap.Modal(this.$refs.addressModal);
     }
+    this.fetchAddresses(); // Load on mount
   },
   methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
+    async fetchAddresses() {
+      this.loading = true;
+      try {
+        const res = await api.get('/user/addresses');
+        this.addresses = res.data.data;
+      } catch (err) {
+        console.error("Failed to load addresses", err);
+      } finally {
+        this.loading = false;
+      }
     },
+
+    handleNavigation(page) {
+      this.$router.push(`/${page}`);
+    },
+
     openModal(address = null) {
       if (address) {
         this.isEditing = true;
@@ -235,6 +228,7 @@ export default {
       }
       this.bsModal?.show();
     },
+
     resetForm() {
       this.form = {
         id: null,
@@ -249,100 +243,77 @@ export default {
         label: "Home"
       };
     },
-    saveAddress() {
-      if (this.isEditing) {
-        const index = this.addresses.findIndex(a => a.id === this.form.id);
-        if (index !== -1) this.addresses[index] = { ...this.form };
-      } else {
-        const newId = Math.max(...this.addresses.map(a => a.id), 0) + 1;
-        this.addresses.push({ ...this.form, id: newId, isDefault: false });
+
+    async saveAddress() {
+      try {
+        if (this.isEditing) {
+          // UPDATE Existing
+          await api.put(`/user/addresses/${this.form.id}`, this.form);
+          alert("Address updated successfully");
+        } else {
+          // ADD New
+          await api.post('/user/addresses', this.form);
+          alert("Address added successfully");
+        }
+        
+        // Refresh list and close modal
+        this.fetchAddresses();
+        this.bsModal?.hide();
+
+      } catch (err) {
+        console.error("Failed to save address", err);
+        alert("Failed to save address. Please check inputs.");
       }
-      this.bsModal?.hide();
     },
-    deleteAddress(id) {
-      if (confirm("Are you sure you want to delete this address?")) {
+
+    async deleteAddress(id) {
+      if (!confirm("Are you sure you want to delete this address?")) return;
+      
+      try {
+        await api.delete(`/user/addresses/${id}`);
         this.addresses = this.addresses.filter(a => a.id !== id);
+      } catch (err) {
+        alert("Failed to delete address");
       }
     },
-    setAsDefault(id) {
-      this.addresses.forEach(a => a.isDefault = (a.id === id));
+
+    async setAsDefault(id) {
+      try {
+        await api.put(`/user/addresses/${id}/default`);
+        // Update local state to reflect change immediately
+        this.addresses.forEach(a => a.isDefault = (a.id === id));
+      } catch (err) {
+        alert("Failed to set default address");
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-/* PREMIUM DESIGN SYSTEM */
-
-/* Background */
+/* Reused Styles */
 .bg-light-subtle { background-color: #f9fafb !important; }
-
-/* Typography */
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
-
-/* Cards */
-.card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-.hover-border-dark:hover {
-  border-color: #000 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
-}
-
-/* Modal Styling */
+.card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.hover-border-dark:hover { border-color: #000 !important; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; }
 .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-.modal-backdrop.show { opacity: 0.2; } /* Lighter backdrop for cleaner feel */
+.modal-backdrop.show { opacity: 0.2; } 
+.form-control:focus, .form-select:focus { background-color: #fff; border: 1px solid #000 !important; box-shadow: none; }
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.hover-fill { transition: all 0.2s ease; }
+.hover-fill:hover { background-color: #000; color: #fff; border-color: #000; }
+.hover-text-danger:hover { color: #dc3545 !important; }
+.hover-opacity-75:hover { opacity: 0.75; }
+.animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 
-/* Form Elements */
-.form-control:focus, .form-select:focus {
-  background-color: #fff;
-  border: 1px solid #000 !important;
-  box-shadow: none;
-}
-
-/* Buttons */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.hover-fill {
-  transition: all 0.2s ease;
-}
-.hover-fill:hover {
-  background-color: #000;
-  color: #fff;
-  border-color: #000;
-}
-
-.hover-text-danger:hover {
-  color: #dc3545 !important;
-}
-
-.hover-opacity-75:hover {
-  opacity: 0.75;
-}
-
-/* Animations */
-.animate-fade-up {
-  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Checkbox/Radio Buttons custom styling */
-.btn-check:checked + .btn-outline-light {
-    background-color: #000;
-    color: #fff;
-    border-color: #000;
+/* FIXED: Changed text color to white when selected */
+.btn-check:checked + .btn-outline-light { 
+  background-color: #000; 
+  color: #fff !important; 
+  border-color: #000; 
 }
 </style>
