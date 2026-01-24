@@ -154,6 +154,8 @@
   </div>
 </template>
 
+
+
 <script>
 import ProductCard from '@/components/ProductCard.vue';
 import api from "@/services/api";
@@ -165,6 +167,7 @@ export default {
     return {
       products: [],
       categories: [],
+      wishlistIds: [], // Stores IDs of wishlisted products
       loading: false,
       
       // Filters
@@ -187,21 +190,47 @@ export default {
     }
   },
   watch: {
-    // Immediate: true ensures this runs on initial load AND subsequent changes
+    // Removed 'immediate: true' to stop it from running too early
     '$route.query.category': {
       handler(newSlug) {
-        console.log("Route Changed -> Category Slug:", newSlug);
         this.selectedCategorySlug = newSlug || 'all';
         this.resetAndFetch();
-      },
-      immediate: true 
+      }
     }
   },
-  mounted() {
-    this.fetchCategories();
+  async mounted() {
+    this.loading = true; // Show loading immediately
+    
+    // 1. Fetch Categories
+    await this.fetchCategories();
+    
+    // 2. CRITICAL: Wait for Wishlist IDs to load completely
+    await this.fetchWishlist();
+    
+    // 3. Set Category from URL
+    const categoryQuery = this.$route.query.category;
+    if (categoryQuery) {
+      this.selectedCategorySlug = categoryQuery;
+    }
+
+    // 4. NOW fetch products (Wishlist IDs are ready)
+    await this.fetchProducts();
+    
+    this.loading = false;
   },
   methods: {
-    // 1. Fetch Categories for Sidebar
+    // --- 1. Fetch Wishlist Data ---
+    async fetchWishlist() {
+      try {
+        const res = await api.get('/user/wishlist');
+        // Ensure IDs are integers for comparison
+        this.wishlistIds = res.data.data.map(item => parseInt(item.product.id || item.id));
+      } catch (err) {
+        this.wishlistIds = [];
+      }
+    },
+
+    // --- 2. Fetch Categories ---
     async fetchCategories() {
       try {
         const res = await api.get('/api/categories');
@@ -211,9 +240,9 @@ export default {
       }
     },
 
-    // 2. Main Fetch Logic
+    // --- 3. Main Fetch Logic ---
     async fetchProducts(append = false) {
-      this.loading = true;
+      if (!append) this.loading = true;
       try {
         const params = {
           page: this.page,
@@ -226,13 +255,20 @@ export default {
         };
 
         const endpoint = `/products/category/${this.selectedCategorySlug}`;
-        
         const res = await api.get(endpoint, { params });
         
+        // --- MAP DATA: Sync with Wishlist IDs ---
+        const mappedData = res.data.data.map(product => ({
+          ...product,
+          id: parseInt(product.id), // Ensure ID is number
+          // Check if this ID exists in the loaded wishlistIds
+          is_wishlisted: this.wishlistIds.includes(parseInt(product.id))
+        }));
+        
         if (append) {
-          this.products = [...this.products, ...res.data.data];
+          this.products = [...this.products, ...mappedData];
         } else {
-          this.products = res.data.data;
+          this.products = mappedData;
         }
         this.totalProducts = res.data.total;
 
@@ -243,7 +279,6 @@ export default {
       }
     },
 
-    // 3. Actions
     resetAndFetch() {
       this.page = 1;
       this.fetchProducts(false);
@@ -257,19 +292,21 @@ export default {
     toggleCategory(slug) {
       const newSlug = this.selectedCategorySlug === slug ? 'all' : slug;
       this.$router.push({ query: { ...this.$route.query, category: newSlug } });
+      this.selectedCategorySlug = newSlug;
+      this.resetAndFetch();
     },
 
     resetFilters() {
-      this.$router.push({ query: {} }); // Clear URL
+      this.$router.push({ query: {} }); 
       this.selectedCategorySlug = 'all';
       this.priceMin = null;
       this.priceMax = null;
       this.inStockOnly = false;
       this.onSaleOnly = false;
       this.sortBy = 'newest';
+      this.resetAndFetch();
     },
 
-    // 4. Cart, Wishlist & Details
     async handleAddToCart(product) {
       try {
         await api.post(`/user/cart/${product.id}`);
@@ -280,20 +317,33 @@ export default {
       }
     },
 
-    // --- NEW: Handle Wishlist Event ---
+    // --- 4. Wishlist Toggle Logic ---
     async handleAddToWishlist(product) {
       try {
-        // Calls POST /user/wishlist/<product_id>
-        await api.post(`/user/wishlist/${product.id}`);
-        alert(`${product.name} added to Wishlist!`);
+        const pId = parseInt(product.id);
+        
+        if (this.wishlistIds.includes(pId)) {
+           // REMOVE
+           await api.delete(`/user/wishlist/${pId}`);
+           this.wishlistIds = this.wishlistIds.filter(id => id !== pId);
+        } else {
+           // ADD
+           await api.post(`/user/wishlist/${pId}`);
+           this.wishlistIds.push(pId);
+           alert(`${product.name} added to Wishlist!`);
+        }
+
+        // Update UI State Locally
+        const index = this.products.findIndex(p => p.id === pId);
+        if (index !== -1) {
+          this.products[index].is_wishlisted = this.wishlistIds.includes(pId);
+        }
+
       } catch (err) {
         if (err.response?.status === 401) {
           alert("Please login to use the wishlist.");
-        } else if (err.response?.status === 400) {
-          alert("Product is already in your wishlist.");
         } else {
           console.error("Wishlist Error:", err);
-          alert("Failed to add to wishlist.");
         }
       }
     },
@@ -304,6 +354,8 @@ export default {
   }
 };
 </script>
+
+
 
 <style scoped>
 /* Reused styles */

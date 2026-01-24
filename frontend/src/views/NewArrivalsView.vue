@@ -145,6 +145,7 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -153,6 +154,7 @@ import api from '@/services/api';
 
 // --- State Variables ---
 const products = ref([]);
+const wishlistIds = ref([]); // Store Wishlist IDs
 const loading = ref(false);
 const error = ref(null);
 const sortBy = ref('newest');
@@ -164,9 +166,22 @@ const email = ref('');
 const limit = 8;
 const router = useRouter();
 
-// --- Fetch Logic ---
+// --- 1. Fetch Wishlist First ---
+const fetchWishlist = async () => {
+  try {
+    const res = await api.get('/user/wishlist');
+    // Store IDs: [1, 2, 5...]
+    // Handle different backend response structures safely
+    wishlistIds.value = res.data.data.map(item => parseInt(item.product?.id || item.product_id || item.id));
+  } catch (err) {
+    wishlistIds.value = []; // User might not be logged in
+  }
+};
+
+// --- 2. Fetch Products Logic ---
 const fetchProducts = async (reset = false) => {
-  loading.value = true;
+  // Only show full loader on initial/reset fetch, not load more
+  if (reset) loading.value = true;
   error.value = null;
 
   try {
@@ -184,14 +199,17 @@ const fetchProducts = async (reset = false) => {
     const response = await api.get('/products/new-arrivals', { params });
 
     const mappedProducts = response.data.data.map(item => {
+      const pId = parseInt(item.id);
       return {
-        id: item.id,
+        id: pId,
         name: item.product_name || item.name, 
         price: item.price,
         category: item.category_name || 'General', 
         badge: 'New', 
-        image: item.image || item.image_url || `https://source.unsplash.com/random/300x400?sig=${item.id}&furniture`,
-        rating: 4.5 
+        image: item.image || item.image_url || `https://source.unsplash.com/random/300x400?sig=${pId}&furniture`,
+        rating: 4.5,
+        // Sync with Wishlist IDs
+        is_wishlisted: wishlistIds.value.includes(pId)
       };
     });
     
@@ -209,7 +227,7 @@ const fetchProducts = async (reset = false) => {
     if (err.message === "Network Error") {
       error.value = "Cannot connect to Backend. Is Flask running on port 5000?";
     } else {
-      error.value = "Unable to load products. " + (err.response?.data?.message || err.message);
+      error.value = "Unable to load products.";
     }
   } finally {
     loading.value = false;
@@ -236,7 +254,6 @@ const handleAddToCart = async (product) => {
   } catch (err) {
     if (err.response && err.response.status === 401) {
       alert("Please log in to add items to your cart.");
-      // router.push('/login'); 
     } else {
       console.error("Add to cart error", err);
       alert(err.response?.data?.msg || "Failed to add to cart.");
@@ -244,19 +261,34 @@ const handleAddToCart = async (product) => {
   }
 };
 
-// --- NEW: Handle Wishlist Logic ---
+// --- 3. Handle Wishlist Toggle (Add/Remove) ---
 const handleAddToWishlist = async (product) => {
   try {
-    await api.post(`/user/wishlist/${product.id}`);
-    alert(`${product.name} added to Wishlist!`);
+    const pId = parseInt(product.id);
+
+    if (wishlistIds.value.includes(pId)) {
+       // REMOVE
+       await api.delete(`/user/wishlist/${pId}`);
+       wishlistIds.value = wishlistIds.value.filter(id => id !== pId);
+    } else {
+       // ADD
+       await api.post(`/user/wishlist/${pId}`);
+       wishlistIds.value.push(pId);
+       alert(`${product.name} added to Wishlist!`);
+    }
+
+    // Update UI state locally for immediate feedback
+    const index = products.value.findIndex(p => p.id === pId);
+    if (index !== -1) {
+      products.value[index].is_wishlisted = wishlistIds.value.includes(pId);
+    }
+
   } catch (err) {
     if (err.response?.status === 401) {
       alert("Please login to use the wishlist.");
-    } else if (err.response?.status === 400) {
-      alert("Product is already in your wishlist.");
     } else {
       console.error("Wishlist Error:", err);
-      alert("Failed to add to wishlist.");
+      alert("Action failed.");
     }
   }
 };
@@ -276,10 +308,14 @@ const scrollToGrid = () => {
 };
 
 // --- Lifecycle ---
-onMounted(() => {
-  fetchProducts(true);
+onMounted(async () => {
+  // Wait for wishlist data FIRST, then fetch products
+  await fetchWishlist();
+  await fetchProducts(true);
 });
 </script>
+
+
 
 <style scoped>
 /* PAGE STYLES */

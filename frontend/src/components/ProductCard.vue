@@ -20,7 +20,7 @@
         @click.stop="toggleWishlist"
         title="Add to Wishlist"
       >
-        <i class="bi" :class="isWishlisted ? 'bi-heart-fill text-danger' : 'bi-heart'"></i>
+        <i class="bi" :class="localIsWishlisted ? 'bi-heart-fill text-danger' : 'bi-heart'"></i>
       </button>
 
       <img 
@@ -76,13 +76,21 @@ export default {
   },
   data() {
     return {
-      isWishlisted: false // Local state for immediate UI feedback
+      // 1. Initialize from the prop passed by the parent (ShopView)
+      localIsWishlisted: this.product.is_wishlisted || false
     };
+  },
+  watch: {
+    // 2. Watch for changes (e.g., when parent finishes fetching wishlist API)
+    'product.is_wishlisted'(newVal) {
+      this.localIsWishlisted = newVal;
+    }
   },
   methods: {
     toggleWishlist() {
-      this.isWishlisted = !this.isWishlisted; // Toggle UI instantly
-      this.$emit('add-to-wishlist', this.product); // Emit event to parent
+      // Optimistic Update (Instant Red Heart)
+      this.localIsWishlisted = !this.localIsWishlisted;
+      this.$emit('add-to-wishlist', this.product); 
     }
   }
 };
