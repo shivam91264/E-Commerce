@@ -148,7 +148,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ProductCard.vue';
-import api from '@/services/api'; // This is your raw Axios instance
+import api from '@/services/api'; // Ensure this points to your Axios instance
 
 // --- State Variables ---
 const products = ref([]);
@@ -180,12 +180,8 @@ const fetchProducts = async (reset = false) => {
       limit: limit
     };
 
-    // --- FIX IS HERE: Use api.get() directly ---
-    // We call the URL endpoint string directly instead of a helper function
     const response = await api.get('/products/new-arrivals', { params });
 
-    // --- Data Mapping ---
-    // Ensure the structure matches what your Flask API returns
     const mappedProducts = response.data.data.map(item => {
       return {
         id: item.id,
@@ -193,7 +189,8 @@ const fetchProducts = async (reset = false) => {
         price: item.price,
         category: item.category_name || 'General', 
         badge: 'New', 
-        image: item.image_url || `https://source.unsplash.com/random/300x400?sig=${item.id}&furniture`,
+        // Image logic matching Shop page
+        image: item.image || item.image_url || `https://source.unsplash.com/random/300x400?sig=${item.id}&furniture`,
         rating: 4.5 
       };
     });
@@ -232,23 +229,23 @@ const loadMore = () => {
   }
 };
 
+// --- FIX: ADD TO CART LOGIC MATCHING SHOP PAGE ---
 const handleAddToCart = async (product) => {
   try {
-    // --- FIX IS HERE: Use api.post() directly ---
-    // Assuming your endpoint expects product_id and quantity
-    await api.post('/cart/add', { 
-      product_id: product.id, 
-      quantity: 1 
-    });
+    // Using the same endpoint structure as ShopView.vue
+    // Endpoint: POST /user/cart/<product_id>
+    await api.post(`/user/cart/${product.id}`);
     
     alert(`${product.name} added to cart!`);
   } catch (err) {
+    // Handle 401 (Unauthorized) specifically
     if (err.response && err.response.status === 401) {
       alert("Please log in to add items to your cart.");
-      // Optional: router.push('/login');
+      router.push('/login'); // Optional: Redirect to login
     } else {
       console.error("Add to cart error", err);
-      alert("Failed to add to cart.");
+      // Fallback alert if something else breaks
+      alert(err.response?.data?.msg || "Failed to add to cart.");
     }
   }
 };
@@ -258,8 +255,6 @@ const viewProductDetails = (product) => {
 };
 
 const handleNewsletter = async () => {
-  // Use api.post directly if you have this endpoint
-  // await api.post('/newsletter/subscribe', { email: email.value });
   alert(`Subscribed ${email.value} to newsletter!`);
   email.value = '';
 };
@@ -274,7 +269,6 @@ onMounted(() => {
   fetchProducts(true);
 });
 </script>
-
 
 <style scoped>
 /* PAGE STYLES */
