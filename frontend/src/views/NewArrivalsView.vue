@@ -67,6 +67,7 @@
               :product="product" 
               @add-to-cart="handleAddToCart"
               @click-product="viewProductDetails"
+              @add-to-wishlist="handleAddToWishlist"
             />
           </div>
         </div>
@@ -148,7 +149,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ProductCard.vue';
-import api from '@/services/api'; // Ensure this points to your Axios instance
+import api from '@/services/api'; 
 
 // --- State Variables ---
 const products = ref([]);
@@ -189,7 +190,6 @@ const fetchProducts = async (reset = false) => {
         price: item.price,
         category: item.category_name || 'General', 
         badge: 'New', 
-        // Image logic matching Shop page
         image: item.image || item.image_url || `https://source.unsplash.com/random/300x400?sig=${item.id}&furniture`,
         rating: 4.5 
       };
@@ -229,23 +229,34 @@ const loadMore = () => {
   }
 };
 
-// --- FIX: ADD TO CART LOGIC MATCHING SHOP PAGE ---
 const handleAddToCart = async (product) => {
   try {
-    // Using the same endpoint structure as ShopView.vue
-    // Endpoint: POST /user/cart/<product_id>
     await api.post(`/user/cart/${product.id}`);
-    
     alert(`${product.name} added to cart!`);
   } catch (err) {
-    // Handle 401 (Unauthorized) specifically
     if (err.response && err.response.status === 401) {
       alert("Please log in to add items to your cart.");
-      router.push('/login'); // Optional: Redirect to login
+      // router.push('/login'); 
     } else {
       console.error("Add to cart error", err);
-      // Fallback alert if something else breaks
       alert(err.response?.data?.msg || "Failed to add to cart.");
+    }
+  }
+};
+
+// --- NEW: Handle Wishlist Logic ---
+const handleAddToWishlist = async (product) => {
+  try {
+    await api.post(`/user/wishlist/${product.id}`);
+    alert(`${product.name} added to Wishlist!`);
+  } catch (err) {
+    if (err.response?.status === 401) {
+      alert("Please login to use the wishlist.");
+    } else if (err.response?.status === 400) {
+      alert("Product is already in your wishlist.");
+    } else {
+      console.error("Wishlist Error:", err);
+      alert("Failed to add to wishlist.");
     }
   }
 };

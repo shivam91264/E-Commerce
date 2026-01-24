@@ -67,6 +67,7 @@
               :product="product" 
               @add-to-cart="handleAddToCart"
               @click-product="viewProductDetails"
+              @add-to-wishlist="handleAddToWishlist"
             />
           </div>
         </div>
@@ -198,7 +199,6 @@ export default {
   },
   mounted() {
     this.fetchCategories();
-    // No need to call fetchProducts() here because the watcher handles it immediately
   },
   methods: {
     // 1. Fetch Categories for Sidebar
@@ -226,8 +226,7 @@ export default {
         };
 
         const endpoint = `/products/category/${this.selectedCategorySlug}`;
-        console.log(`Fetching: ${endpoint}`, params);
-
+        
         const res = await api.get(endpoint, { params });
         
         if (append) {
@@ -256,7 +255,6 @@ export default {
     },
 
     toggleCategory(slug) {
-      // Updates URL -> Triggers Watcher -> Triggers Fetch
       const newSlug = this.selectedCategorySlug === slug ? 'all' : slug;
       this.$router.push({ query: { ...this.$route.query, category: newSlug } });
     },
@@ -269,18 +267,34 @@ export default {
       this.inStockOnly = false;
       this.onSaleOnly = false;
       this.sortBy = 'newest';
-      // Watcher will trigger fetch when query clears
     },
 
-    // 4. Cart & Details
+    // 4. Cart, Wishlist & Details
     async handleAddToCart(product) {
       try {
         await api.post(`/user/cart/${product.id}`);
-        // this.$root.$emit('cart-updated'); // Depending on your setup
         alert("Added to cart");
       } catch (err) {
         if(err.response?.status === 401) alert("Please login first");
         else alert("Failed to add to cart");
+      }
+    },
+
+    // --- NEW: Handle Wishlist Event ---
+    async handleAddToWishlist(product) {
+      try {
+        // Calls POST /user/wishlist/<product_id>
+        await api.post(`/user/wishlist/${product.id}`);
+        alert(`${product.name} added to Wishlist!`);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          alert("Please login to use the wishlist.");
+        } else if (err.response?.status === 400) {
+          alert("Product is already in your wishlist.");
+        } else {
+          console.error("Wishlist Error:", err);
+          alert("Failed to add to wishlist.");
+        }
       }
     },
 

@@ -14,6 +14,15 @@
         {{ product.badge }}
       </span>
 
+      <button 
+        class="btn btn-light btn-sm position-absolute top-0 end-0 m-3 rounded-circle shadow-sm z-2 d-flex align-items-center justify-content-center hover-scale"
+        style="width: 32px; height: 32px;"
+        @click.stop="toggleWishlist"
+        title="Add to Wishlist"
+      >
+        <i class="bi" :class="isWishlisted ? 'bi-heart-fill text-danger' : 'bi-heart'"></i>
+      </button>
+
       <img 
         :src="product.image || 'https://via.placeholder.com/300x400'" 
         class="w-100 h-100 object-fit-cover transition-transform" 
@@ -29,10 +38,9 @@
         </button>
       </div>
       
-      </div>
+    </div>
 
     <div class="card-body p-0">
-      
       <div class="d-flex justify-content-between align-items-start mb-1">
         <h6 class="card-title fw-semibold mb-0 text-truncate text-dark" style="max-width: 70%;" :title="product.name">
           {{ product.name }}
@@ -64,6 +72,17 @@ export default {
     product: {
       type: Object,
       required: true
+    }
+  },
+  data() {
+    return {
+      isWishlisted: false // Local state for immediate UI feedback
+    };
+  },
+  methods: {
+    toggleWishlist() {
+      this.isWishlisted = !this.isWishlisted; // Toggle UI instantly
+      this.$emit('add-to-wishlist', this.product); // Emit event to parent
     }
   }
 };
@@ -111,6 +130,14 @@ export default {
 .btn-white:hover {
   background-color: #000;
   color: #fff;
+}
+
+/* Hover Scale for Wishlist Button */
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.1);
 }
 
 /* Cursor Pointer for Clickability */
