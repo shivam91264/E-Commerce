@@ -361,6 +361,34 @@ def list_products():
 # ----------------------------------------------------------------------
 
 
+# Insert this function at the top of user_operations.py or api.py
+
+def wishlist_to_vue(wishlist_item):
+    product = wishlist_item.product
+    
+    # Logic to get the Primary Image
+    image_url = "https://via.placeholder.com/300x400" # Default fallback
+    if product.images:
+        # Find the image marked is_primary, or default to the first one
+        primary = next((img for img in product.images if img.is_primary), product.images[0])
+        image_url = primary.image_url
+
+    return {
+        # We return the Product ID as the main ID for easier frontend logic
+        "id": product.id, 
+        "product": {
+            "id": product.id,
+            "name": product.name,
+            "price": product.price,
+            "category_name": product.category.name if product.category else "General",
+            "stock_quantity": product.stock_quantity,
+            "image": image_url
+        },
+        "added_at": wishlist_item.added_at.isoformat()
+    }
+
+
+
 ## TESTING DONE :--
 @user_bp.route('/user/wishlist', methods=['GET'])
 @jwt_required()

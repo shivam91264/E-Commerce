@@ -21,7 +21,11 @@
           </div>
         </div>
 
-        <div v-if="wishlistItems.length === 0" class="text-center py-6 animate-fade-up">
+        <div v-if="loading" class="text-center py-5">
+           <div class="spinner-border text-dark" role="status"></div>
+        </div>
+
+        <div v-else-if="wishlistItems.length === 0" class="text-center py-6 animate-fade-up">
           <div class="bg-white d-inline-flex p-4 rounded-circle shadow-sm mb-4">
             <i class="bi bi-heart display-4 text-muted opacity-25"></i>
           </div>
@@ -74,83 +78,115 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ProductCard.vue';
+import api from '@/services/api';
 
-export default {
-  name: "WishlistView",
-  components: {
-    ProductCard
-  },
-  data() {
-    return {
-      // Mock Wishlist Data
-      wishlistItems: [
-        { 
-          id: 101, 
-          name: "Linen Lounge Chair", 
-          category: "Furniture", 
-          price: 299, 
-          image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=600&q=80", 
-          badge: "",
-          inStock: true
-        },
-        { 
-          id: 104, 
-          name: "Leather Tote Bag", 
-          category: "Accessories", 
-          price: 195, 
-          image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=600&q=80", 
-          badge: "",
-          inStock: true
-        },
-        { 
-          id: 107, 
-          name: "Cotton Throw", 
-          category: "Decor", 
-          price: 65, 
-          image: "https://images.unsplash.com/photo-1512914890207-6bf613254978?auto=format&fit=crop&w=600&q=80", 
-          badge: "Low Stock",
-          inStock: true
-        },
-        { 
-          id: 203, 
-          name: "Floor Lamp", 
-          category: "Lighting", 
-          price: 129, 
-          image: "https://images.unsplash.com/photo-1507473888900-52e1ad145986?auto=format&fit=crop&w=600&q=80", 
-          badge: "",
-          inStock: false
-        }
-      ]
-    };
-  },
-  methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
-      // this.$router.push({ name: page });
-    },
-    moveToCart(product) {
-      // 1. Add to cart logic here
-      console.log(`Moving ${product.name} to cart`);
-      alert(`${product.name} moved to cart!`);
+const router = useRouter();
+const wishlistItems = ref([]);
+const loading = ref(false);
+
+// --- 1. Fetch Wishlist from API ---
+const fetchWishlist = async () => {
+  loading.value = true;
+  try {
+    const res = await api.get('/user/wishlist');
+    
+    // Map Backend Data to UI Format
+    // The API returns structure: { data: [ { id: 1, product: { ... }, added_at: ... } ] }
+    wishlistItems.value = res.data.data.map(item => {
+      const p = item.product;
       
-      // 2. Remove from wishlist
-      this.removeFromWishlist(product.id);
-    },
-    removeFromWishlist(id) {
-      this.wishlistItems = this.wishlistItems.filter(item => item.id !== id);
-    },
-    clearWishlist() {
-      if(confirm("Are you sure you want to clear your wishlist?")) {
-        this.wishlistItems = [];
-      }
-    },
-    viewProductDetails(product) {
-      console.log(`View Details: ${product.id}`);
+      return {
+        id: p.id, // The Product ID (used for API calls)
+        name: p.name,
+        price: p.price,
+        category: p.category_name || "General",
+        image: p.image || "https://via.placeholder.com/300x400",
+        
+        // Stock Logic
+        inStock: p.stock_quantity > 0,
+        badge: (p.stock_quantity > 0 && p.stock_quantity < 5) ? "Low Stock" : "",
+        
+        // Important: Keep heart red in card
+        is_wishlisted: true 
+      };
+    });
+
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      // alert("Please login to view your wishlist.");
+      // router.push('/login');
+    } else {
+      console.error("Wishlist Load Error:", err);
     }
+  } finally {
+    loading.value = false;
   }
 };
+
+// --- 2. Move to Cart ---
+const moveToCart = async (product) => {
+  try {
+    // API: /user/wishlist/move-to-cart
+    await api.post('/user/wishlist/move-to-cart', { 
+      product_id: product.id, 
+      quantity: 1 
+    });
+    
+    // UI Update: Remove from list immediately
+    wishlistItems.value = wishlistItems.value.filter(item => item.id !== product.id);
+    alert(`${product.name} moved to cart!`);
+    
+  } catch (err) {
+    console.error("Move to Cart Error:", err);
+    alert(err.response?.data?.msg || "Failed to move to cart.");
+  }
+};
+
+// --- 3. Remove from Wishlist ---
+const removeFromWishlist = async (productId) => {
+  try {
+    // API: DELETE /user/wishlist/<product_id>
+    await api.delete(`/user/wishlist/${productId}`);
+    
+    // UI Update
+    wishlistItems.value = wishlistItems.value.filter(item => item.id !== productId);
+    
+  } catch (err) {
+    console.error("Remove Error:", err);
+    alert("Failed to remove item.");
+  }
+};
+
+// --- 4. Clear All ---
+const clearWishlist = async () => {
+  if (!confirm("Are you sure you want to clear your wishlist?")) return;
+  
+  try {
+    await api.delete('/user/wishlist'); // API: DELETE /user/wishlist (clears all)
+    wishlistItems.value = [];
+  } catch (err) {
+    console.error("Clear Error:", err);
+    alert("Failed to clear wishlist.");
+  }
+};
+
+// --- Navigation ---
+const handleNavigation = (page) => {
+  if (page === 'shop') router.push('/shop');
+};
+
+const viewProductDetails = (product) => {
+  router.push(`/product/${product.id}`);
+};
+
+// --- Lifecycle ---
+onMounted(() => {
+  fetchWishlist();
+});
 </script>
 
 <style scoped>
