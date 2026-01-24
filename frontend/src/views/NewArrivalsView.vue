@@ -31,7 +31,7 @@
       <div class="container px-lg-5 py-3">
         <div class="d-flex justify-content-between align-items-center">
           <span class="text-muted extra-small text-uppercase tracking-wide">
-            Showing {{ sortedProducts.length }} new products
+            Showing {{ products.length }} of {{ totalProducts }} new products
           </span>
 
           <div class="d-flex align-items-center gap-2">
@@ -49,8 +49,20 @@
     <main class="flex-grow-1 py-5">
       <div class="container px-lg-5">
         
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4 g-lg-5">
-          <div class="col" v-for="product in sortedProducts" :key="product.id">
+        <div v-if="loading && products.length === 0" class="text-center py-5">
+            <div class="spinner-border text-dark" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <div v-else-if="error" class="alert alert-danger text-center rounded-0">
+            {{ error }}
+            <br>
+            <button class="btn btn-sm btn-outline-danger mt-2" @click="fetchProducts(true)">Retry</button>
+        </div>
+
+        <div v-else class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4 g-lg-5">
+          <div class="col" v-for="product in products" :key="product.id">
             <ProductCard 
               :product="product" 
               @add-to-cart="handleAddToCart"
@@ -59,13 +71,20 @@
           </div>
         </div>
 
-        <div class="text-center mt-5 pt-4">
-           <span class="d-block text-muted small mb-3">Viewing 8 of 24 New Items</span>
+        <div class="text-center mt-5 pt-4" v-if="products.length > 0">
+           <span class="d-block text-muted small mb-3">Viewing {{ products.length }} of {{ totalProducts }} New Items</span>
+           
            <div class="progress mx-auto mb-4" style="height: 2px; max-width: 200px;">
-             <div class="progress-bar bg-dark" style="width: 33%"></div>
+             <div class="progress-bar bg-dark" :style="{ width: (products.length / totalProducts) * 100 + '%' }"></div>
            </div>
-           <button class="btn btn-outline-dark rounded-0 px-5 py-3 text-uppercase fw-bold tracking-wide hover-fill">
-             Load More
+           
+           <button 
+             v-if="currentPage < totalPages"
+             class="btn btn-outline-dark rounded-0 px-5 py-3 text-uppercase fw-bold tracking-wide hover-fill"
+             @click="loadMore"
+             :disabled="loading"
+           >
+             {{ loading ? 'Loading...' : 'Load More' }}
            </button>
         </div>
 
@@ -108,9 +127,15 @@
           <p class="text-white-50 mb-4" style="max-width: 500px; margin: 0 auto;">
             Get early access to new drops, exclusive offers, and editorial content.
           </p>
-          <form class="d-flex justify-content-center gap-2 flex-column flex-sm-row" style="max-width: 500px; margin: 0 auto;">
-            <input type="email" class="form-control form-control-lg rounded-pill border-0" placeholder="Your email address">
-            <button class="btn btn-light rounded-pill px-4 fw-bold">Notify Me</button>
+          <form @submit.prevent="handleNewsletter" class="d-flex justify-content-center gap-2 flex-column flex-sm-row" style="max-width: 500px; margin: 0 auto;">
+            <input 
+                v-model="email"
+                type="email" 
+                class="form-control form-control-lg rounded-pill border-0" 
+                placeholder="Your email address"
+                required
+            >
+            <button type="submit" class="btn btn-light rounded-pill px-4 fw-bold">Notify Me</button>
           </form>
         </div>
       </div>
@@ -119,60 +144,137 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ProductCard.vue';
+import api from '@/services/api'; // This is your raw Axios instance
 
-export default {
-  name: "NewArrivalsView",
-  components: {
-    ProductCard
-  },
-  data() {
-    return {
-      sortBy: 'newest',
-      // Dummy "New" Products
-      products: [
-        { id: 301, name: "Velvet Accent Chair", category: "Furniture", price: 349, image: "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 302, name: "Minimalist Wall Clock", category: "Decor", price: 85, image: "https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 303, name: "Abstract Canvas Art", category: "Art", price: 120, image: "https://images.unsplash.com/photo-1579783902614-a3fb39279c0f?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 304, name: "Ceramic Table Lamp", category: "Lighting", price: 150, image: "https://images.unsplash.com/photo-1513506003011-3b03c8b6955e?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 305, name: "Woven Jute Rug", category: "Decor", price: 199, image: "https://images.unsplash.com/photo-1575414769150-b828f724ff0c?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 306, name: "Marble Coaster Set", category: "Accessories", price: 35, image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 307, name: "Smart Air Purifier", category: "Electronics", price: 299, image: "https://images.unsplash.com/photo-1585776245991-cf79dd8fc78b?auto=format&fit=crop&w=600&q=80", badge: "New" },
-        { id: 308, name: "Leather Weekend Bag", category: "Travel", price: 245, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80", badge: "New" },
-      ]
-    };
-  },
-  computed: {
-    sortedProducts() {
-      let result = [...this.products];
-      if (this.sortBy === 'price_low') {
-        result.sort((a, b) => a.price - b.price);
-      } else if (this.sortBy === 'price_high') {
-        result.sort((a, b) => b.price - a.price);
-      } else {
-        // Default newest (mocked by ID)
-        result.sort((a, b) => b.id - a.id);
-      }
-      return result;
+// --- State Variables ---
+const products = ref([]);
+const loading = ref(false);
+const error = ref(null);
+const sortBy = ref('newest');
+const currentPage = ref(1);
+const totalPages = ref(1);
+const totalProducts = ref(0);
+const email = ref('');
+
+const limit = 8;
+const router = useRouter();
+
+// --- Fetch Logic ---
+const fetchProducts = async (reset = false) => {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    if (reset) {
+      currentPage.value = 1;
+      products.value = [];
     }
-  },
-  methods: {
-    handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
-    },
-    handleAddToCart(product) {
-      alert(`Added ${product.name} to cart!`);
-    },
-    viewProductDetails(product) {
-      console.log(`View Product: ${product.id}`);
-    },
-    scrollToGrid() {
-      document.getElementById('new-arrivals-grid').scrollIntoView({ behavior: 'smooth' });
+
+    const params = {
+      sort: sortBy.value,
+      page: currentPage.value,
+      limit: limit
+    };
+
+    // --- FIX IS HERE: Use api.get() directly ---
+    // We call the URL endpoint string directly instead of a helper function
+    const response = await api.get('/products/new-arrivals', { params });
+
+    // --- Data Mapping ---
+    // Ensure the structure matches what your Flask API returns
+    const mappedProducts = response.data.data.map(item => {
+      return {
+        id: item.id,
+        name: item.product_name || item.name, 
+        price: item.price,
+        category: item.category_name || 'General', 
+        badge: 'New', 
+        image: item.image_url || `https://source.unsplash.com/random/300x400?sig=${item.id}&furniture`,
+        rating: 4.5 
+      };
+    });
+    
+    if (reset) {
+      products.value = mappedProducts;
+    } else {
+      products.value = [...products.value, ...mappedProducts];
+    }
+
+    totalProducts.value = response.data.total;
+    totalPages.value = response.data.pages;
+
+  } catch (err) {
+    console.error("Fetch Error:", err);
+    if (err.message === "Network Error") {
+      error.value = "Cannot connect to Backend. Is Flask running on port 5000?";
+    } else {
+      error.value = "Unable to load products. " + (err.response?.data?.message || err.message);
+    }
+  } finally {
+    loading.value = false;
+  }
+};
+
+// --- Watchers ---
+watch(sortBy, () => {
+  fetchProducts(true);
+});
+
+// --- Event Handlers ---
+const loadMore = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    fetchProducts(false);
+  }
+};
+
+const handleAddToCart = async (product) => {
+  try {
+    // --- FIX IS HERE: Use api.post() directly ---
+    // Assuming your endpoint expects product_id and quantity
+    await api.post('/cart/add', { 
+      product_id: product.id, 
+      quantity: 1 
+    });
+    
+    alert(`${product.name} added to cart!`);
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      alert("Please log in to add items to your cart.");
+      // Optional: router.push('/login');
+    } else {
+      console.error("Add to cart error", err);
+      alert("Failed to add to cart.");
     }
   }
 };
+
+const viewProductDetails = (product) => {
+  router.push(`/product/${product.id}`);
+};
+
+const handleNewsletter = async () => {
+  // Use api.post directly if you have this endpoint
+  // await api.post('/newsletter/subscribe', { email: email.value });
+  alert(`Subscribed ${email.value} to newsletter!`);
+  email.value = '';
+};
+
+const scrollToGrid = () => {
+  const el = document.getElementById('new-arrivals-grid');
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+};
+
+// --- Lifecycle ---
+onMounted(() => {
+  fetchProducts(true);
+});
 </script>
+
 
 <style scoped>
 /* PAGE STYLES */
