@@ -10,16 +10,22 @@
             <p class="text-muted lead fs-6 mb-0">Track, return, or buy things again.</p>
           </div>
           
-          <div class="d-flex gap-2 overflow-auto pb-1 hide-scrollbar">
-            <button 
-              v-for="filter in ['All', 'Processing', 'Shipped', 'Delivered', 'Cancelled']" 
-              :key="filter"
-              class="btn rounded-pill px-4 fw-bold text-uppercase extra-small transition-all border"
-              :class="currentFilter === filter ? 'btn-dark' : 'btn-white'"
-              @click="currentFilter = filter"
-            >
-              {{ filter }}
-            </button>
+          <div class="d-flex align-items-center gap-3">
+            <label class="text-muted extra-small fw-bold text-uppercase tracking-wide mb-0">Filter By:</label>
+            <div class="position-relative">
+              <select 
+                class="form-select rounded-pill px-4 py-2 fw-bold text-dark border-secondary-subtle shadow-sm cursor-pointer" 
+                style="min-width: 180px;"
+                v-model="currentFilter"
+              >
+                <option value="All">Show All Orders</option>
+                <option value="Pending">Pending</option>
+                <option value="Processing">Processing</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -32,7 +38,9 @@
             <i class="bi bi-box-seam display-4 text-muted opacity-25"></i>
           </div>
           <h3 class="fw-bold mb-3">No orders found</h3>
-          <p class="text-muted mb-4">You have no past orders matching this filter.</p>
+          <p class="text-muted mb-4">
+            No orders found with status "<strong>{{ currentFilter }}</strong>".
+          </p>
           <button class="btn btn-dark rounded-pill px-5 py-3 text-uppercase fw-bold tracking-wide hover-lift" @click="currentFilter = 'All'">
             Show All Orders
           </button>
@@ -63,8 +71,9 @@
                     <span class="fw-bold text-dark small font-monospace">{{ order.order_number }}</span>
                   </div>
                   <div class="col-12 col-md-4 text-md-end">
+                    
                     <button 
-                      @click="downloadInvoice(order.id)" 
+                      @click="downloadInvoice(order)" 
                       class="btn btn-link text-decoration-none text-muted p-0 extra-small fw-bold text-uppercase d-inline-flex align-items-center gap-2 hover-dark"
                     >
                       <i class="bi bi-file-earmark-arrow-down fs-5"></i> Invoice
@@ -95,8 +104,6 @@
                                {{ item.mappedName }}
                              </h6>
                              <span class="text-muted small">Qty: {{ item.mappedQty }}</span>
-                             <br>
-                             <span class="text-muted extra-small" v-if="item.price">${{ item.price }}</span>
                            </div>
                         </div>
                       </div>
@@ -134,7 +141,7 @@ import { useRouter } from 'vue-router';
 import api from '@/services/api';
 
 const loading = ref(true);
-const currentFilter = ref('All');
+const currentFilter = ref('All'); 
 const orders = ref([]);
 const router = useRouter();
 
@@ -142,38 +149,32 @@ const fetchOrders = async () => {
   loading.value = true;
   try {
     const params = {};
-    if (currentFilter.value !== 'All') params.status = currentFilter.value;
+    // Ensure we only pass status if it's NOT 'All'
+    if (currentFilter.value && currentFilter.value !== 'All') {
+      params.status = currentFilter.value;
+    }
+
+    console.log("Fetching orders with params:", params); // Debug log
 
     const res = await api.get('/user/orders', { params });
     
-    // --- ROBUST DATA MAPPING FIX ---
-    // Handle whether API wraps data in { data: [...] } or returns [...] directly
     const rawData = res.data.data || res.data; 
 
     if (Array.isArray(rawData)) {
       orders.value = rawData.map(order => {
         return {
           ...order,
-          // Map Total Amount (Handle 'total' vs 'total_amount')
           displayTotal: order.total || order.total_amount,
-          
-          // Map Date
           formattedDate: order.date || new Date(order.created_at).toLocaleDateString(),
-
-          // Map Items (Fixes missing Name/Qty issue)
           items: order.items.map(item => ({
             ...item,
-            // Check 'name' OR 'product_name'
             mappedName: item.name || item.product_name || "Unknown Product",
-            // Check 'qty' OR 'quantity'
             mappedQty: item.qty || item.quantity || 1,
-            // Fallback image
             image: item.image || "https://via.placeholder.com/150"
           }))
         };
       });
     } else {
-      console.error("Unexpected API response format", res.data);
       orders.value = [];
     }
 
@@ -184,15 +185,73 @@ const fetchOrders = async () => {
   }
 };
 
-const downloadInvoice = async (orderId) => {
-  try {
-    // Note: This endpoint currently returns a JSON message, not a PDF file.
-    const res = await api.get(`/user/orders/${orderId}/invoice`);
-    alert(`Invoice requested: ${res.data.msg} (Order #${res.data.order_id})`);
-  } catch (err) {
-    console.error("Invoice Error:", err);
-    alert("Failed to request invoice.");
-  }
+// Generate Invoice HTML and Trigger Print to PDF
+const downloadInvoice = (order) => {
+  const invoiceWindow = window.open('', '_blank');
+  
+  const itemsHtml = order.items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.mappedName}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.mappedQty}</td>
+    </tr>
+  `).join('');
+
+  const htmlContent = `
+    <html>
+      <head>
+        <title>Invoice - ${order.order_number}</title>
+        <style>
+          body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+          .meta { margin-bottom: 30px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { text-align: left; background: #f4f4f4; padding: 10px; }
+          .total { text-align: right; font-size: 1.5em; font-weight: bold; }
+          .footer { margin-top: 50px; text-align: center; font-size: 0.8em; color: #777; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>INVOICE</h1>
+          <p>Order #${order.order_number}</p>
+        </div>
+        
+        <div class="meta">
+          <p><strong>Date:</strong> ${order.formattedDate}</p>
+          <p><strong>Status:</strong> ${order.status}</p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="total">
+          TOTAL PAID: $${order.displayTotal}
+        </div>
+
+        <div class="footer">
+          <p>Thank you for shopping with MarketHub!</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  invoiceWindow.document.write(htmlContent);
+  invoiceWindow.document.close();
+  
+  // Wait for content to load then trigger print
+  setTimeout(() => {
+    invoiceWindow.focus();
+    invoiceWindow.print();
+  }, 500);
 };
 
 const handleNavigation = (orderNumber) => {
@@ -203,12 +262,14 @@ const getStatusColor = (status) => {
   switch(status) {
     case 'Delivered': return 'text-success';
     case 'Shipped': return 'text-primary';
-    case 'Processing': return 'text-warning';
+    case 'Processing': return 'text-info'; 
+    case 'Pending': return 'text-warning';
     case 'Cancelled': return 'text-danger';
     default: return 'text-dark';
   }
 };
 
+// Re-fetch whenever the dropdown selection changes
 watch(currentFilter, () => {
   fetchOrders();
 });
@@ -219,7 +280,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Reused Styles */
+/* Keeping your existing styles */
 .bg-light-subtle { background-color: #f9fafb !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
@@ -237,4 +298,5 @@ onMounted(() => {
 @media (min-width: 768px) { .border-start-md { border-left: 1px solid #dee2e6; } }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.cursor-pointer { cursor: pointer; }
 </style>
