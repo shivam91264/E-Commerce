@@ -27,7 +27,7 @@
            <div class="spinner-border text-dark" role="status"></div>
         </div>
 
-        <div v-else-if="filteredOrders.length === 0" class="text-center py-6 animate-fade-up">
+        <div v-else-if="orders.length === 0" class="text-center py-6 animate-fade-up">
           <div class="bg-white d-inline-flex p-4 rounded-circle shadow-sm mb-4">
             <i class="bi bi-box-seam display-4 text-muted opacity-25"></i>
           </div>
@@ -42,7 +42,7 @@
           <div class="col-lg-10 col-xl-9">
             
             <div 
-              v-for="(order, index) in filteredOrders" 
+              v-for="(order, index) in orders" 
               :key="order.id" 
               class="card border-0 shadow-sm rounded-4 mb-5 overflow-hidden animate-fade-up"
               :style="{ animationDelay: `${index * 100}ms` }"
@@ -52,18 +52,21 @@
                 <div class="row align-items-center g-3">
                   <div class="col-6 col-md-3">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Order Placed</span>
-                    <span class="fw-bold text-dark small">{{ order.date }}</span>
+                    <span class="fw-bold text-dark small">{{ order.formattedDate }}</span>
                   </div>
                   <div class="col-6 col-md-2">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Total</span>
-                    <span class="fw-bold text-dark small">${{ order.total }}</span>
+                    <span class="fw-bold text-dark small">${{ order.displayTotal }}</span>
                   </div>
                   <div class="col-6 col-md-3">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Order #</span>
-                    <span class="fw-bold text-dark small font-monospace">{{ order.id }}</span>
+                    <span class="fw-bold text-dark small font-monospace">{{ order.order_number }}</span>
                   </div>
                   <div class="col-12 col-md-4 text-md-end">
-                    <button @click="downloadInvoice(order.realId)" class="btn btn-link text-decoration-none text-muted p-0 extra-small fw-bold text-uppercase d-inline-flex align-items-center gap-2 hover-dark">
+                    <button 
+                      @click="downloadInvoice(order.id)" 
+                      class="btn btn-link text-decoration-none text-muted p-0 extra-small fw-bold text-uppercase d-inline-flex align-items-center gap-2 hover-dark"
+                    >
                       <i class="bi bi-file-earmark-arrow-down fs-5"></i> Invoice
                     </button>
                   </div>
@@ -78,7 +81,7 @@
                         <h5 class="fw-bold mb-1" :class="getStatusColor(order.status)">
                           {{ order.status }}
                         </h5>
-                        <p class="text-muted small mb-0">{{ order.deliveryMsg }}</p>
+                        <p class="text-muted small mb-0">{{ order.deliveryMsg || 'Status Updated' }}</p>
                       </div>
 
                       <div class="d-flex flex-column gap-3">
@@ -86,16 +89,21 @@
                            <div class="ratio ratio-1x1 bg-light rounded-3 overflow-hidden border" style="width: 80px; min-width: 80px;">
                              <img :src="item.image || 'https://via.placeholder.com/150'" class="object-fit-cover w-100 h-100" alt="Product">
                            </div>
+                           
                            <div>
-                             <h6 class="fw-bold text-dark mb-1 d-block text-decoration-none">{{ item.name }}</h6>
-                             <span class="text-muted small">Qty: {{ item.qty }}</span>
+                             <h6 class="fw-bold text-dark mb-1 d-block text-decoration-none">
+                               {{ item.mappedName }}
+                             </h6>
+                             <span class="text-muted small">Qty: {{ item.mappedQty }}</span>
+                             <br>
+                             <span class="text-muted extra-small" v-if="item.price">${{ item.price }}</span>
                            </div>
                         </div>
                       </div>
                   </div>
 
                   <div class="col-md-4 d-flex flex-column justify-content-center align-items-md-end gap-2 border-start-md ps-md-4">
-                      <button @click="handleNavigation('ordersuccess?orderId=' + order.realId)" class="btn btn-dark w-100 rounded-pill py-2 fw-bold text-uppercase extra-small hover-lift">
+                      <button @click="handleNavigation(order.order_number)" class="btn btn-dark w-100 rounded-pill py-2 fw-bold text-uppercase extra-small hover-lift">
                         View Order
                       </button>
                       <button v-if="order.status === 'Delivered'" class="btn btn-outline-dark w-100 rounded-pill py-2 fw-bold text-uppercase extra-small hover-fill">
@@ -104,7 +112,6 @@
                       <button v-else class="btn btn-light border w-100 rounded-pill py-2 fw-bold text-uppercase extra-small text-muted">
                         Track Package
                       </button>
-                      <a href="#" class="text-muted extra-small text-decoration-underline text-center mt-2">Problem with order?</a>
                   </div>
 
                 </div>
@@ -112,7 +119,7 @@
 
             </div>
 
-            </div>
+          </div>
         </div>
 
       </div>
@@ -121,110 +128,94 @@
   </div>
 </template>
 
-<script>
-import api from "@/services/api";
+<script setup>
+import { ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import api from '@/services/api';
 
-export default {
-  name: "OrdersView",
-  data() {
-    return {
-      loading: true,
-      currentFilter: 'All',
-      orders: [], // Will fetch from API
-    };
-  },
-  computed: {
-    // Client-side filtering fallback (though API handles it now)
-    filteredOrders() {
-      // Since API filters, we just return orders. 
-      // If you want client-side filtering instead, uncomment:
-      // if (this.currentFilter === 'All') return this.orders;
-      // return this.orders.filter(o => o.status === this.currentFilter);
-      return this.orders;
+const loading = ref(true);
+const currentFilter = ref('All');
+const orders = ref([]);
+const router = useRouter();
+
+const fetchOrders = async () => {
+  loading.value = true;
+  try {
+    const params = {};
+    if (currentFilter.value !== 'All') params.status = currentFilter.value;
+
+    const res = await api.get('/user/orders', { params });
+    
+    // --- ROBUST DATA MAPPING FIX ---
+    // Handle whether API wraps data in { data: [...] } or returns [...] directly
+    const rawData = res.data.data || res.data; 
+
+    if (Array.isArray(rawData)) {
+      orders.value = rawData.map(order => {
+        return {
+          ...order,
+          // Map Total Amount (Handle 'total' vs 'total_amount')
+          displayTotal: order.total || order.total_amount,
+          
+          // Map Date
+          formattedDate: order.date || new Date(order.created_at).toLocaleDateString(),
+
+          // Map Items (Fixes missing Name/Qty issue)
+          items: order.items.map(item => ({
+            ...item,
+            // Check 'name' OR 'product_name'
+            mappedName: item.name || item.product_name || "Unknown Product",
+            // Check 'qty' OR 'quantity'
+            mappedQty: item.qty || item.quantity || 1,
+            // Fallback image
+            image: item.image || "https://via.placeholder.com/150"
+          }))
+        };
+      });
+    } else {
+      console.error("Unexpected API response format", res.data);
+      orders.value = [];
     }
-  },
-  watch: {
-    // Re-fetch when filter changes
-    currentFilter() {
-      this.fetchOrders();
-    }
-  },
-  mounted() {
-    this.fetchOrders();
-  },
-  methods: {
-    async fetchOrders() {
-      this.loading = true;
-      try {
-        const params = {};
-        if (this.currentFilter !== 'All') {
-          params.status = this.currentFilter;
-        }
 
-        const res = await api.get('/user/orders', { params });
-        
-        // Map API response to match template structure if needed, 
-        // though your API response matches well.
-        // We added 'realId' because your API returns 'id' as order_number string ("ORD-123"), 
-        // but 'downloadInvoice' endpoint expects an INT ID usually? 
-        // NOTE: Your API snippet uses <int:order_id> but stores strings like "ORD-..."
-        // FIX: The backend should ideally accept the string order_number or return the numeric ID separately.
-        // Assuming API returns numeric ID in a field or accepts logic.
-        // For now, mapping directly.
-        this.orders = res.data.data.map(o => ({
-            ...o,
-            realId: o.id // Assuming 'id' from API is the identifier
-        }));
-
-      } catch (err) {
-        console.error("Failed to load orders", err);
-        if (err.response && err.response.status === 401) {
-           this.$router.push('/login');
-        }
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    handleNavigation(path) {
-      // Support query params logic
-      if (path.includes('?')) {
-         const [name, queryStr] = path.split('?');
-         const params = new URLSearchParams(queryStr);
-         this.$router.push({ path: name, query: Object.fromEntries(params) });
-      } else {
-         this.$router.push(`/${path}`);
-      }
-    },
-
-    async downloadInvoice(orderId) {
-      try {
-        // Find the numeric ID if your API requires integer, 
-        // OR pass the string ID if your API supports it.
-        // Based on your API snippet: @user_bp.route('/user/orders/<int:order_id>/invoice')
-        // You MUST pass the INTEGER ID.
-        // Since your list API returned "id": order.order_number (String),
-        // YOU NEED TO UPDATE YOUR API to return the numeric 'pk' (primary key) separately (e.g. "pk": order.id).
-        
-        // Assuming we pass whatever ID we have for now:
-        const res = await api.get(`/user/orders/${orderId}/invoice`);
-        alert(res.data.msg + " " + res.data.order_id);
-      } catch (err) {
-        alert("Failed to download invoice");
-      }
-    },
-
-    getStatusColor(status) {
-      switch(status) {
-        case 'Delivered': return 'text-success';
-        case 'Shipped': return 'text-primary';
-        case 'Processing': return 'text-warning';
-        case 'Cancelled': return 'text-danger';
-        default: return 'text-dark';
-      }
-    }
+  } catch (err) {
+    console.error("Failed to load orders", err);
+  } finally {
+    loading.value = false;
   }
 };
+
+const downloadInvoice = async (orderId) => {
+  try {
+    // Note: This endpoint currently returns a JSON message, not a PDF file.
+    const res = await api.get(`/user/orders/${orderId}/invoice`);
+    alert(`Invoice requested: ${res.data.msg} (Order #${res.data.order_id})`);
+  } catch (err) {
+    console.error("Invoice Error:", err);
+    alert("Failed to request invoice.");
+  }
+};
+
+const handleNavigation = (orderNumber) => {
+  router.push(`/order/${orderNumber}`);
+};
+
+const getStatusColor = (status) => {
+  switch(status) {
+    case 'Delivered': return 'text-success';
+    case 'Shipped': return 'text-primary';
+    case 'Processing': return 'text-warning';
+    case 'Cancelled': return 'text-danger';
+    default: return 'text-dark';
+  }
+};
+
+watch(currentFilter, () => {
+  fetchOrders();
+});
+
+onMounted(() => {
+  fetchOrders();
+});
 </script>
 
 <style scoped>

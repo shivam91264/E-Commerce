@@ -1061,43 +1061,47 @@ def get_user_orders():
     if not user:
         return jsonify({"msg": "User not found"}), 404
 
-    status = request.args.get("status")  # optional
-
+    status = request.args.get("status")
     query = Order.query.filter_by(user_id=user.id)
 
     if status and status != "All":
         query = query.filter(Order.status == status)
 
+    # Sort by newest first
     orders = query.order_by(Order.created_at.desc()).all()
 
     result = []
-
     for order in orders:
         items_preview = []
-
         for item in order.items:
-            product = Product.query.get(item.product_id)
-
-            image = None
-            if product:
-                primary_img = next(
-                    (img.image_url for img in product.images if img.is_primary),
-                    None
-                )
-                image = primary_img
+            # --- FIX: ROBUST IMAGE LOGIC ---
+            # Default placeholder
+            image_url = "https://via.placeholder.com/150?text=No+Image"
+            
+            # Try to get real product image
+            if item.product and item.product.images:
+                # Find primary image, or fallback to the first one available
+                primary = next((img for img in item.product.images if img.is_primary), None)
+                if primary:
+                    image_url = primary.image_url
+                elif len(item.product.images) > 0:
+                    image_url = item.product.images[0].image_url
 
             items_preview.append({
-                "name": item.product_name,
+                # Fallback to "Unknown Product" if name is missing in DB
+                "name": item.product_name or "Unknown Product", 
                 "qty": item.quantity,
-                "image": image
+                "image": image_url
             })
 
         result.append({
-            "id": order.order_number,
+            "id": order.id,                 # INT: Primary Key (For Invoice Button)
+            "order_number": order.order_number, # STRING: For Display (ORD-123)
             "date": order.created_at.strftime("%b %d, %Y"),
             "total": float(order.total_amount),
             "status": order.status,
-            "deliveryMsg": order.delivery_message or "",
+            # Handle missing delivery message gracefully
+            "deliveryMsg": f"Status: {order.status}", 
             "items": items_preview
         })
 
@@ -1106,6 +1110,7 @@ def get_user_orders():
         "total": len(result),
         "msg": "Orders fetched successfully"
     }), 200
+
 
 
 
