@@ -149,19 +149,18 @@ const fetchOrders = async () => {
   loading.value = true;
   try {
     const params = {};
-    // Ensure we only pass status if it's NOT 'All'
+    // We still send params to backend in case backend is fixed later
     if (currentFilter.value && currentFilter.value !== 'All') {
       params.status = currentFilter.value;
     }
-
-    console.log("Fetching orders with params:", params); // Debug log
 
     const res = await api.get('/user/orders', { params });
     
     const rawData = res.data.data || res.data; 
 
     if (Array.isArray(rawData)) {
-      orders.value = rawData.map(order => {
+      // 1. First Map the data
+      const mappedOrders = rawData.map(order => {
         return {
           ...order,
           displayTotal: order.total || order.total_amount,
@@ -174,6 +173,15 @@ const fetchOrders = async () => {
           }))
         };
       });
+
+      // 2. Client-Side Filter Fix
+      // If backend returns everything, we filter it here to ensure UI is correct
+      if (currentFilter.value !== 'All') {
+        orders.value = mappedOrders.filter(order => order.status === currentFilter.value);
+      } else {
+        orders.value = mappedOrders;
+      }
+
     } else {
       orders.value = [];
     }
@@ -185,7 +193,6 @@ const fetchOrders = async () => {
   }
 };
 
-// Generate Invoice HTML and Trigger Print to PDF
 const downloadInvoice = (order) => {
   const invoiceWindow = window.open('', '_blank');
   
@@ -247,7 +254,6 @@ const downloadInvoice = (order) => {
   invoiceWindow.document.write(htmlContent);
   invoiceWindow.document.close();
   
-  // Wait for content to load then trigger print
   setTimeout(() => {
     invoiceWindow.focus();
     invoiceWindow.print();
@@ -269,7 +275,6 @@ const getStatusColor = (status) => {
   }
 };
 
-// Re-fetch whenever the dropdown selection changes
 watch(currentFilter, () => {
   fetchOrders();
 });
