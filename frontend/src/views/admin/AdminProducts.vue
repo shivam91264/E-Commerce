@@ -58,7 +58,6 @@
                   <th class="py-3 text-uppercase extra-small text-muted fw-bold border-0">Category</th>
                   <th class="py-3 text-uppercase extra-small text-muted fw-bold border-0">Price</th> 
                   <th class="py-3 text-uppercase extra-small text-muted fw-bold border-0">Sale Price</th> 
-                  
                   <th class="py-3 text-uppercase extra-small text-muted fw-bold border-0">Stock</th>
                   <th class="py-3 text-uppercase extra-small text-muted fw-bold border-0">Status</th>
                   <th class="pe-4 py-3 text-uppercase extra-small text-muted fw-bold border-0 text-end">Actions</th>
@@ -69,7 +68,7 @@
                   <td class="ps-4 py-3">
                     <div class="d-flex align-items-center gap-3">
                       <div class="ratio ratio-1x1 rounded-3 overflow-hidden bg-light border" style="width: 48px;">
-                        <img :src="product.image || 'https://via.placeholder.com/150'" class="object-fit-cover w-100 h-100" :alt="product.name">
+                        <img :src="getImage(product)" class="object-fit-cover w-100 h-100" :alt="product.name">
                       </div>
                       <div>
                         <span class="d-block fw-bold text-dark small">{{ product.name }}</span>
@@ -195,13 +194,40 @@
                 <input type="number" class="form-control bg-light border-0" v-model="form.stock_quantity" required>
               </div>
               
-              <div class="col-md-6">
+              <div class="col-md-12">
                 <label class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">SKU</label>
                 <input type="text" class="form-control bg-light border-0" v-model="form.sku" placeholder="CODE-001">
               </div>
-              <div class="col-md-6">
-                <label class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted">Image URL</label>
-                <input type="text" class="form-control bg-light border-0" v-model="form.image">
+
+              <div class="col-12 mt-3">
+                <label class="form-label extra-small text-uppercase tracking-wide fw-bold text-muted d-flex justify-content-between align-items-center">
+                  Product Images
+                  <button type="button" class="btn btn-sm text-primary fw-bold p-0 border-0" @click="addImageSlot" v-if="form.images.length < 5">
+                    <i class="bi bi-plus-circle me-1"></i> Add URL
+                  </button>
+                </label>
+
+                <div v-for="(img, index) in form.images" :key="index" class="d-flex gap-2 mb-2 align-items-center">
+                  <span class="text-muted small fw-bold" style="width: 20px;">{{ index + 1 }}.</span>
+                  <input 
+                    type="text" 
+                    class="form-control bg-light border-0" 
+                    v-model="form.images[index]" 
+                    :placeholder="index === 0 ? 'Primary Image URL (Required)' : 'Additional Image URL'"
+                    :required="index === 0"
+                  >
+                  
+                  <button 
+                    type="button" 
+                    class="btn btn-white border shadow-sm hover-text-danger px-2" 
+                    @click="removeImageSlot(index)"
+                    v-if="form.images.length > 1"
+                    title="Remove Image"
+                  >
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+                <div class="form-text extra-small">Add up to 5 images. The first image will be used as the main display.</div>
               </div>
               
               <div class="col-12 mt-4 text-end">
@@ -243,11 +269,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import api from "@/services/api"; // Your Axios instance
+import api from "@/services/api";
 
 const router = useRouter();
 
-// --- State Management ---
+// --- State ---
 const products = ref([]);
 const categories = ref([]);
 const loading = ref(false);
@@ -256,11 +282,10 @@ const error = ref(null);
 const isEditing = ref(false);
 const deleteTarget = ref(null);
 
-// Pagination & Filters
 const pagination = reactive({ page: 1, total_pages: 1, limit: 10 });
 const filters = reactive({ search: "", category: "", active: "" });
 
-// Form Model (Exact match with Backend keys now)
+// --- Updated Form Model (Array for images) ---
 const form = reactive({
   id: null,
   name: "",
@@ -270,15 +295,27 @@ const form = reactive({
   sale_price: null,
   stock_quantity: 0, 
   sku: "",
-  image: "",
+  images: [""], // Start with 1 empty string
   is_active: true
 });
 
-// --- Auth Guard ---
+// --- Auth Check ---
 const checkAuth = () => {
   const token = localStorage.getItem('access_token');
   if (!token) { router.push('/login'); return false; }
   return true;
+};
+
+// --- Helper: Get Display Image ---
+const getImage = (product) => {
+  // If images is an array and not empty
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    // If it's an array of objects (from DB relation), return url. If strings, return string.
+    const firstImg = product.images[0];
+    return typeof firstImg === 'object' ? firstImg.url : firstImg;
+  }
+  // Fallback to old single string field or placeholder
+  return product.image || 'https://via.placeholder.com/150';
 };
 
 // --- API Methods ---
@@ -295,8 +332,6 @@ const fetchProducts = async () => {
     };
     
     const response = await api.get('/admin/products', { params });
-    
-    // Direct assignment because API keys match perfectly
     products.value = response.data.data;
     pagination.total_pages = response.data.pages || 1;
   } catch (err) {
@@ -309,14 +344,8 @@ const fetchProducts = async () => {
 
 const fetchCategories = async () => {
   try {
-    // 1. Use your preferred working API
     const response = await api.get('/admin/categories/dropdown');
-    
-    // 2. Fix the Data Path
-    // Axios gives 'response.data'. Your API puts the list inside a 'data' key.
-    // So we need 'response.data.data' to get the array: [{id: 1, name: "Shoes"}]
     categories.value = response.data.data; 
-    
   } catch (err) {
     console.error("Category Dropdown Error:", err);
   }
@@ -333,15 +362,27 @@ const debounceFetch = (() => {
   return () => { clearTimeout(timeout); timeout = setTimeout(fetchProducts, 500); };
 })();
 
+// --- Dynamic Image Logic ---
+const addImageSlot = () => {
+  if (form.images.length < 5) form.images.push("");
+};
+
+const removeImageSlot = (index) => {
+  if (form.images.length > 1) form.images.splice(index, 1);
+};
+
 // --- CRUD Operations ---
 const handleSave = async () => {
   submitting.value = true;
   try {
-    // Send form directly (API handles keys correctly now)
+    // Clean empty strings from images array before sending
+    const cleanForm = { ...form };
+    cleanForm.images = form.images.filter(url => url.trim() !== "");
+
     if (isEditing.value) {
-      await api.put(`/admin/products/${form.id}`, form);
+      await api.put(`/admin/products/${form.id}`, cleanForm);
     } else {
-      await api.post('/admin/products', form);
+      await api.post('/admin/products', cleanForm);
     }
     
     const modalEl = document.getElementById('productModal');
@@ -392,7 +433,15 @@ const toggleStatus = async (product) => {
 const openProductModal = (product = null) => {
   isEditing.value = !!product;
   if (product) {
-    // Populate form directly from product object
+    // Determine existing images structure (backend might return array of objects or strings)
+    let existingImages = [""];
+    
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      existingImages = product.images.map(img => typeof img === 'object' ? img.url : img);
+    } else if (product.image) {
+      existingImages = [product.image];
+    }
+
     Object.assign(form, {
       id: product.id,
       name: product.name,
@@ -402,7 +451,7 @@ const openProductModal = (product = null) => {
       sale_price: product.sale_price,
       stock_quantity: product.stock_quantity,
       sku: product.sku,
-      image: product.image,
+      images: existingImages, // Load array
       is_active: product.is_active
     });
   } else {
@@ -431,7 +480,7 @@ const resetForm = () => {
     stock_quantity: 0, 
     is_active: true, 
     sku: "", 
-    image: "" 
+    images: [""] // Reset to array with 1 slot
   });
 };
 

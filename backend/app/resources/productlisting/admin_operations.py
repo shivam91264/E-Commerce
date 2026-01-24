@@ -438,23 +438,28 @@ def get_user_orders(user_id):
 def product_to_admin_vue(product):
     category = Category.query.get(product.category_id)
 
-    # Fetch primary image or fallback
-    primary_img = ProductImage.query.filter_by(product_id=product.id, is_primary=True).first()
-    fallback_img = ProductImage.query.filter_by(product_id=product.id).first()
-    image_url = primary_img.image_url if primary_img else (fallback_img.image_url if fallback_img else "https://via.placeholder.com/120")
+    # Get all images, sorted by display_order
+    images_query = ProductImage.query.filter_by(product_id=product.id).order_by(ProductImage.display_order).all()
+    
+    # Create list of URLs for frontend
+    image_urls = [img.image_url for img in images_query]
+    
+    # Fallback for table display (primary image)
+    primary_img_url = image_urls[0] if image_urls else "https://via.placeholder.com/120"
 
     return {
         "id": product.id,
         "name": product.name,
         "category": category.name if category else "Uncategorized",
-        "category_id": product.category_id,       # Required for Edit Dropdown
-        "description": product.description,       # Required for Edit Form
+        "category_id": product.category_id,
+        "description": product.description,
         "sku": product.sku,
         "price": product.price,
-        "sale_price": product.sale_price,         # Matching Vue Key
-        "stock_quantity": product.stock_quantity, # Matching Vue Key
-        "is_active": product.is_active,           # Matching Vue Key
-        "image": image_url
+        "sale_price": product.sale_price,
+        "stock_quantity": product.stock_quantity,
+        "is_active": product.is_active,
+        "image": primary_img_url, # Single string for Table View
+        "images": image_urls      # Array for Modal View (Edit Mode)
     }
 
 # ------------------ GET all products ------------------ #
@@ -495,6 +500,7 @@ def list_products():
     }), 200
 
 
+# ------------------ CREATE product ------------------ #
 # ------------------ CREATE product ------------------ #
 @admin_bp.route('/admin/products', methods=['POST'])
 @jwt_required()
@@ -542,16 +548,32 @@ def create_product():
     db.session.add(new_prod)
     db.session.commit()
 
-    # Handle Image
-    if data.get("image"):
-        img = ProductImage(product_id=new_prod.id, image_url=data["image"], is_primary=True)
-        db.session.add(img)
-        db.session.commit()
+    # --- FIX: Handle Multiple Images ---
+    # The frontend sends: "images": ["url1", "url2"]
+    images_list = data.get("images", []) 
+    
+    # Fallback: check if frontend sent old single "image" key
+    if not images_list and data.get("image"):
+        images_list = [data["image"]]
+
+    for index, img_url in enumerate(images_list):
+        if img_url.strip(): # Avoid empty strings
+            new_img = ProductImage(
+                product_id=new_prod.id, 
+                image_url=img_url, 
+                is_primary=(index == 0), # First image is primary
+                display_order=index
+            )
+            db.session.add(new_img)
+    
+    db.session.commit()
 
     return jsonify({
         "msg": "Product created successfully",
         "data": product_to_admin_vue(new_prod)
     }), 201
+
+
 
 
 # ------------------ UPDATE product ------------------ #
@@ -566,37 +588,55 @@ def update_product(id):
 
     data = request.get_json()
 
-    # Update Fields if present
-    if "name" in data: 
-        prod.name = data["name"]
-        # prod.slug = slugify(data["name"]) # Uncomment if you want slug to update with name
+    # --- FIX 1: Check SKU Uniqueness (Excluding current product) ---
+    if "sku" in data and data["sku"]:
+        existing_sku = Product.query.filter_by(sku=data["sku"]).first()
+        if existing_sku and existing_sku.id != id:
+            return jsonify({"msg": "SKU already exists"}), 400
 
+    # Update Basic Fields
+    if "name" in data: prod.name = data["name"]
+    
     if "category_id" in data:
         cat = Category.query.get(data["category_id"])
         if cat: prod.category_id = cat.id
 
     if "price" in data: prod.price = float(data["price"])
-    if "sale_price" in data: prod.sale_price = float(data["sale_price"]) if data["sale_price"] else None
+    if "sale_price" in data: 
+        prod.sale_price = float(data["sale_price"]) if data["sale_price"] else None
+    
     if "stock_quantity" in data: prod.stock_quantity = int(data["stock_quantity"])
     if "is_active" in data: prod.is_active = bool(data["is_active"])
     if "sku" in data: prod.sku = data["sku"]
     if "description" in data: prod.description = data["description"]
 
-    # Update Image
-    if "image" in data:
-        img = ProductImage.query.filter_by(product_id=id, is_primary=True).first()
-        if img:
-            img.image_url = data["image"]
-        else:
-            new_img = ProductImage(product_id=id, image_url=data["image"], is_primary=True)
-            db.session.add(new_img)
+    # --- FIX 2: Safer Image Update Logic ---
+    if "images" in data:
+        # Delete existing images using explicit session synchronization setting
+        ProductImage.query.filter_by(product_id=id).delete(synchronize_session=False)
+        
+        # Add new images
+        images_list = data["images"]
+        for index, img_url in enumerate(images_list):
+            if img_url and img_url.strip():
+                new_img = ProductImage(
+                    product_id=prod.id, 
+                    image_url=img_url, 
+                    is_primary=(index == 0), 
+                    display_order=index
+                )
+                db.session.add(new_img)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+        return jsonify({
+            "msg": "Product updated",
+            "data": product_to_admin_vue(prod)
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": "Update failed", "error": str(e)}), 500
 
-    return jsonify({
-        "msg": "Product updated",
-        "data": product_to_admin_vue(prod)
-    }), 200
 
 
 # ------------------ DELETE product ------------------ #
