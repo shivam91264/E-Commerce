@@ -80,14 +80,14 @@ def revenue_trend():
 
 
 ##  TESTING DONE
-# 3️⃣ Order Status Breakdown (Doughnut Chart)
 @admin_bp.route('/admin/order_status', methods=['GET'])
 @jwt_required()
 def order_status():
     if not get_admin_user():
         return jsonify({"msg": "Admin access required"}), 401
 
-    statuses = ['Delivered', 'Pending', 'Processing', 'Cancelled']
+    # FIX: Added 'Shipped' to the list so it gets counted
+    statuses = ['Delivered', 'Shipped', 'Pending', 'Processing', 'Cancelled']
     data = {}
 
     for status in statuses:
@@ -95,6 +95,7 @@ def order_status():
         data[status] = count
 
     return jsonify({"data": data}), 200
+
 
 
 ##  TESTING DONE

@@ -23,7 +23,7 @@
           </div>
         </div>
 
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-4 mb-5 animate-fade-up delay-100">
+        <div v-if="summary" class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-4 mb-5 animate-fade-up delay-100">
           
           <div class="col">
             <div class="card border-0 shadow-sm rounded-4 h-100 p-4 hover-lift transition-all">
@@ -35,7 +35,7 @@
                   <i class="bi bi-arrow-up-short fs-6"></i> 12.5%
                 </span>
               </div>
-              <h3 class="fw-bold tracking-tight mb-1">₹4,20,000</h3>
+              <h3 class="fw-bold tracking-tight mb-1">{{ formatCurrency(summary.revenue) }}</h3>
               <span class="text-muted small text-uppercase tracking-wide fw-bold">Total Revenue</span>
             </div>
           </div>
@@ -50,7 +50,7 @@
                   <i class="bi bi-arrow-up-short fs-6"></i> 5.2%
                 </span>
               </div>
-              <h3 class="fw-bold tracking-tight mb-1">1,240</h3>
+              <h3 class="fw-bold tracking-tight mb-1">{{ summary.total_orders }}</h3>
               <span class="text-muted small text-uppercase tracking-wide fw-bold">Total Orders</span>
             </div>
           </div>
@@ -65,7 +65,7 @@
                   <i class="bi bi-arrow-right-short fs-6"></i> 0.8%
                 </span>
               </div>
-              <h3 class="fw-bold tracking-tight mb-1">760</h3>
+              <h3 class="fw-bold tracking-tight mb-1">{{ summary.active_users }}</h3>
               <span class="text-muted small text-uppercase tracking-wide fw-bold">Active Users</span>
             </div>
           </div>
@@ -80,7 +80,7 @@
                   Stable
                 </span>
               </div>
-              <h3 class="fw-bold tracking-tight mb-1">32%</h3>
+              <h3 class="fw-bold tracking-tight mb-1">{{ summary.return_rate }}%</h3>
               <span class="text-muted small text-uppercase tracking-wide fw-bold">Return Customer Rate</span>
             </div>
           </div>
@@ -115,7 +115,7 @@
                 <canvas id="statusChart"></canvas>
               </div>
               <div class="mt-4 text-center">
-                 <span class="text-muted extra-small">Total Orders: 1,240</span>
+                 <span class="text-muted extra-small">Total Orders: {{ summary ? summary.total_orders : 0 }}</span>
               </div>
             </div>
           </div>
@@ -137,7 +137,7 @@
             <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
               <h5 class="fw-bold mb-4">Performance Insights</h5>
               
-              <div class="list-group list-group-flush">
+              <div class="list-group list-group-flush" v-if="insights">
                 
                 <div class="list-group-item px-0 border-light-subtle d-flex align-items-center justify-content-between py-3">
                   <div class="d-flex align-items-center gap-3">
@@ -149,7 +149,7 @@
                       <span class="d-block extra-small text-muted">Per transaction</span>
                     </div>
                   </div>
-                  <span class="fw-bold">₹3,250</span>
+                  <span class="fw-bold">{{ formatCurrency(insights.avg_order_value) }}</span>
                 </div>
 
                 <div class="list-group-item px-0 border-light-subtle d-flex align-items-center justify-content-between py-3">
@@ -159,10 +159,10 @@
                     </div>
                     <div>
                       <span class="d-block fw-bold small text-dark">Most Viewed Product</span>
-                      <span class="d-block extra-small text-muted">Linen Lounge Chair</span>
+                      <span class="d-block extra-small text-muted">Trending now</span>
                     </div>
                   </div>
-                  <span class="fw-bold">12.5k Views</span>
+                  <span class="fw-bold">{{ insights.most_viewed || 'N/A' }}</span>
                 </div>
 
                 <div class="list-group-item px-0 border-light-subtle d-flex align-items-center justify-content-between py-3">
@@ -172,12 +172,12 @@
                     </div>
                     <div>
                       <span class="d-block fw-bold small text-dark">Highest Rated Item</span>
-                      <span class="d-block extra-small text-muted">Ceramic Vase Set</span>
+                      <span class="d-block extra-small text-muted">{{ insights.highest_rated || 'No ratings yet' }}</span>
                     </div>
                   </div>
-                  <span class="fw-bold">4.9/5.0</span>
+                  <span class="fw-bold">{{ insights.highest_rating ? insights.highest_rating + '/5.0' : '-' }}</span>
                 </div>
-                 
+                  
                 <div class="list-group-item px-0 border-0 d-flex align-items-center justify-content-between py-3">
                   <div class="d-flex align-items-center gap-3">
                     <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-muted" style="width: 40px; height: 40px;">
@@ -188,7 +188,7 @@
                       <span class="d-block extra-small text-muted">Based on delivery addresses</span>
                     </div>
                   </div>
-                  <span class="fw-bold">Mumbai, MH</span>
+                  <span class="fw-bold">{{ insights.top_region }}</span>
                 </div>
 
               </div>
@@ -200,135 +200,209 @@
       </div>
     </main>
 
-
   </div>
 </template>
 
 <script>
-// IMPORTANT: You must install chart.js to use this component
-// Run: npm install chart.js
 import Chart from 'chart.js/auto';
+import api from "@/services/api";
 
 export default {
   name: "AdminAnalytics",
   data() {
     return {
+      summary: null,
+      insights: null,
+      
+      // Chart instances
       revenueChart: null,
       statusChart: null,
       categoryChart: null
     };
   },
-  mounted() {
-    this.initCharts();
+  async mounted() {
+    await this.fetchSummary();
+    await this.fetchInsights();
+    await this.fetchRevenueData();
+    await this.fetchStatusData();
+    await this.fetchCategoryData();
   },
   methods: {
+    formatCurrency(value) {
+      if (value === undefined || value === null) return '₹0';
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+      }).format(value);
+    },
+
     exportReport() {
       alert("Preparing PDF report for download...");
+      // You can implement actual PDF download logic here later
     },
-    initCharts() {
-      // 1. Revenue Chart (Line)
-      const ctxRevenue = document.getElementById('revenueChart');
-      if (ctxRevenue) {
-        this.revenueChart = new Chart(ctxRevenue, {
-          type: 'line',
-          data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            datasets: [{
-              label: 'Revenue (₹)',
-              data: [120000, 150000, 180000, 220000, 200000, 250000, 310000, 290000, 350000, 380000, 410000, 420000],
-              borderColor: '#000000', // Premium Black
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              tension: 0.4, // Smooth curve
-              borderWidth: 2,
-              pointRadius: 0,
-              pointHoverRadius: 6,
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: { 
-                backgroundColor: '#000', 
-                titleColor: '#fff', 
-                padding: 10, 
-                cornerRadius: 4 
-              }
-            },
-            scales: {
-              x: { grid: { display: false } },
-              y: { 
-                grid: { borderDash: [5, 5] }, 
-                ticks: { callback: (val) => '₹' + val / 1000 + 'k' } 
-              }
-            }
-          }
-        });
-      }
 
-      // 2. Order Status Chart (Doughnut)
-      const ctxStatus = document.getElementById('statusChart');
-      if (ctxStatus) {
-        this.statusChart = new Chart(ctxStatus, {
-          type: 'doughnut',
-          data: {
-            labels: ['Delivered', 'Pending', 'Processing', 'Cancelled'],
-            datasets: [{
-              data: [65, 15, 12, 8],
-              backgroundColor: [
-                '#198754', // Green (Delivered)
-                '#6c757d', // Grey (Pending)
-                '#ffc107', // Yellow (Processing)
-                '#dc3545'  // Red (Cancelled)
-              ],
-              borderWidth: 0,
-              hoverOffset: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%', // Modern thin ring
-            plugins: {
-              legend: { 
-                position: 'bottom', 
-                labels: { usePointStyle: true, boxWidth: 8, padding: 20, font: { size: 11 } } 
-              }
-            }
-          }
-        });
-      }
+    // --- API Calls ---
 
-      // 3. Categories Chart (Bar)
-      const ctxCategory = document.getElementById('categoryChart');
-      if (ctxCategory) {
-        this.categoryChart = new Chart(ctxCategory, {
-          type: 'bar',
-          data: {
-            labels: ['Furniture', 'Lighting', 'Decor', 'Electronics', 'Acc.'],
-            datasets: [{
-              label: 'Sales',
-              data: [450, 320, 280, 150, 90],
-              backgroundColor: '#000000',
-              borderRadius: 4,
-              barThickness: 20
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false }
-            },
-            scales: {
-              x: { grid: { display: false } },
-              y: { display: false } // Minimal look
+    async fetchSummary() {
+      try {
+        const res = await api.get('/admin/summary');
+        this.summary = res.data;
+      } catch (error) {
+        console.error("Summary load failed", error);
+      }
+    },
+
+    async fetchInsights() {
+      try {
+        const res = await api.get('/admin/performance_insights');
+        this.insights = res.data;
+      } catch (error) {
+        console.error("Insights load failed", error);
+      }
+    },
+
+    // --- Chart 1: Revenue Trend ---
+    async fetchRevenueData() {
+      try {
+        const res = await api.get('/admin/revenue_trend');
+        const apiData = res.data.data; // [{month: '2023-01', revenue: 500}, ...]
+
+        const labels = apiData.map(item => item.month);
+        const values = apiData.map(item => item.revenue);
+
+        this.renderRevenueChart(labels, values);
+      } catch (error) {
+        console.error("Revenue chart failed", error);
+      }
+    },
+
+    renderRevenueChart(labels, data) {
+      const ctx = document.getElementById('revenueChart');
+      if (!ctx) return;
+
+      if (this.revenueChart) this.revenueChart.destroy();
+
+      this.revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Revenue (₹)',
+            data: data,
+            borderColor: '#000000',
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { 
+              grid: { borderDash: [5, 5] }, 
+              ticks: { callback: (val) => '₹' + val } 
             }
           }
-        });
+        }
+      });
+    },
+
+    // --- Chart 2: Order Status ---
+    async fetchStatusData() {
+      try {
+        const res = await api.get('/admin/order_status');
+        const apiData = res.data.data; // {'Delivered': 65, ...}
+
+        const labels = Object.keys(apiData);
+        const values = Object.values(apiData);
+
+        this.renderStatusChart(labels, values);
+      } catch (error) {
+        console.error("Status chart failed", error);
       }
+    },
+
+    renderStatusChart(labels, data) {
+      const ctx = document.getElementById('statusChart');
+      if (!ctx) return;
+
+      if (this.statusChart) this.statusChart.destroy();
+
+      this.statusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: ['#198754', '#6c757d', '#ffc107', '#dc3545'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '75%',
+          plugins: {
+            legend: { 
+              position: 'bottom', 
+              labels: { usePointStyle: true, boxWidth: 8, padding: 20, font: { size: 11 } } 
+            }
+          }
+        }
+      });
+    },
+
+    // --- Chart 3: Categories ---
+    async fetchCategoryData() {
+      try {
+        const res = await api.get('/admin/category_stats');
+        const apiData = res.data.data; // [{category: 'Name', count: 10}]
+
+        const labels = apiData.map(item => item.category);
+        const values = apiData.map(item => item.count);
+
+        this.renderCategoryChart(labels, values);
+      } catch (error) {
+        console.error("Category chart failed", error);
+      }
+    },
+
+    renderCategoryChart(labels, data) {
+      const ctx = document.getElementById('categoryChart');
+      if (!ctx) return;
+
+      if (this.categoryChart) this.categoryChart.destroy();
+
+      this.categoryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sales',
+            data: data,
+            backgroundColor: '#000000',
+            borderRadius: 4,
+            barThickness: 20
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { display: false }
+          }
+        }
+      });
     }
   }
 };
@@ -336,16 +410,11 @@ export default {
 
 <style scoped>
 /* ADMIN THEME STYLES */
-
-/* Backgrounds */
 .bg-light-subtle { background-color: #f9fafb !important; }
-
-/* Typography */
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-tight { letter-spacing: -0.03em; }
 .extra-small { font-size: 0.75rem; }
 
-/* Animations */
 .animate-fade-up {
   animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
@@ -359,7 +428,6 @@ export default {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Interactions */
 .hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -370,13 +438,11 @@ export default {
 
 .transition-all { transition: all 0.2s ease; }
 
-/* Buttons */
 .btn-white {
   background-color: #fff; color: #000; border-color: #dee2e6;
 }
 .btn-white:hover { border-color: #000; }
 
-/* List Group */
 .list-group-item {
   background-color: transparent;
 }
