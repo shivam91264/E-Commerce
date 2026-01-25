@@ -168,7 +168,14 @@ export default {
 
       try {
         const res = await api.get(`/user/orders/${orderId}/success`);
-        this.order = res.data.data;
+        const orderData = res.data.data;
+
+        // FIX: Reverse order items to show newest on top
+        if (orderData && orderData.items && Array.isArray(orderData.items)) {
+           orderData.items = orderData.items.reverse();
+        }
+
+        this.order = orderData;
       } catch (err) {
         console.error("Failed to load order success details", err);
         // Optional: Redirect to error page

@@ -149,33 +149,32 @@ const fetchOrders = async () => {
   loading.value = true;
   try {
     const params = {};
-    // We still send params to backend in case backend is fixed later
     if (currentFilter.value && currentFilter.value !== 'All') {
       params.status = currentFilter.value;
     }
 
     const res = await api.get('/user/orders', { params });
-    
     const rawData = res.data.data || res.data; 
 
     if (Array.isArray(rawData)) {
-      // 1. First Map the data
+      // 1. Map the data
       const mappedOrders = rawData.map(order => {
         return {
           ...order,
           displayTotal: order.total || order.total_amount,
           formattedDate: order.date || new Date(order.created_at).toLocaleDateString(),
+          // FIX: Reverse ITEMS ONLY (newest product inside the card at top)
           items: order.items.map(item => ({
             ...item,
             mappedName: item.name || item.product_name || "Unknown Product",
             mappedQty: item.qty || item.quantity || 1,
             image: item.image || "https://via.placeholder.com/150"
-          }))
+          })).reverse() 
         };
       });
+      // NOTE: Removed the outer .reverse() so we don't flip the order cards themselves
 
-      // 2. Client-Side Filter Fix
-      // If backend returns everything, we filter it here to ensure UI is correct
+      // 2. Client-Side Filter
       if (currentFilter.value !== 'All') {
         orders.value = mappedOrders.filter(order => order.status === currentFilter.value);
       } else {
