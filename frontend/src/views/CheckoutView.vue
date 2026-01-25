@@ -190,6 +190,12 @@ export default {
       this.loading = true;
       try {
         const res = await api.get('/user/checkout/summary');
+        
+        // FIX: Reverse the items array so newest appear first (Top)
+        if (res.data && res.data.items) {
+           res.data.items = res.data.items.reverse();
+        }
+
         this.summary = res.data;
       } catch (err) {
         console.error("Summary error", err);
