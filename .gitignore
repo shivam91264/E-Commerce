@@ -11,3 +11,12 @@ venv/
 
 # Node.js
 node_modules/
+
+
+# ... (keep your existing code)
+
+# Documentation to ignore
+ADMIN_api.md
+ADMIN_Pages.md
+USER_api.md
+User_Page.md
