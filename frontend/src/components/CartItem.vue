@@ -15,13 +15,10 @@
           </h6>
           <p class="text-muted small mb-2 text-truncate">{{ item.variant }}</p>
           <div class="d-flex align-items-center gap-3 mt-1">
-             <button class="btn btn-link text-muted p-0 text-decoration-none extra-small text-uppercase tracking-wide" @click="$emit('remove')">
-               <i class="bi bi-trash me-1"></i> Remove
-             </button>
-             <button class="btn btn-link text-muted p-0 text-decoration-none extra-small text-uppercase tracking-wide">
-               <i class="bi bi-heart me-1"></i> Save
-             </button>
-          </div>
+              <button class="btn btn-link text-muted p-0 text-decoration-none extra-small text-uppercase tracking-wide" @click="$emit('remove')">
+                <i class="bi bi-trash me-1"></i> Remove
+              </button>
+              </div>
         </div>
       </div>
 
@@ -56,6 +53,7 @@ export default {
   },
   methods: {
     updateQty(change) {
+      // Note: Ensure parent passes item.product_id if item.id is not correct based on previous context
       this.$emit('update-quantity', this.item.id, this.item.quantity + change);
     }
   }

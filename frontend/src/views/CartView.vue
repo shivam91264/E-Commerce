@@ -37,10 +37,10 @@
             <div class="border-top border-dark">
               <CartItem 
                 v-for="item in cartItems" 
-                :key="item.id" 
+                :key="item.product_id" 
                 :item="item" 
                 @update-quantity="updateQuantity"
-                @remove="removeItem"
+                @remove="removeItem(item.product_id)"
                 @click-item="navigateToProduct"
               />
             </div>
@@ -131,91 +131,111 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import api from "@/services/api"; 
 import CartItem from '@/components/CartItem.vue';
-import api from "@/services/api";
 
-export default {
-  name: "CartView",
-  components: {
-    CartItem
-  },
-  data() {
-    return {
-      cartItems: [],
-      loading: true
-    };
-  },
-  computed: {
-    cartCount() {
-      // Calculate total item count (sum of quantities)
-      return this.cartItems.reduce((acc, item) => acc + item.quantity, 0);
-    },
-    subtotal() {
-      // API might return this, but calculating on frontend is safer for instant UI updates
-      return this.cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+const router = useRouter();
+const cartItems = ref([]);
+const loading = ref(true);
+
+// --- Computed Properties ---
+const cartCount = computed(() => {
+  return cartItems.value.reduce((acc, item) => acc + item.quantity, 0);
+});
+
+const subtotal = computed(() => {
+  return cartItems.value.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+});
+
+// --- API Actions ---
+
+// 1. Fetch Cart
+const fetchCart = async () => {
+  loading.value = true;
+  try {
+    const response = await api.get('/user/cart');
+    
+    // Mapping API 'id' to 'product_id' to match frontend logic
+    const rawData = response.data.data || [];
+    cartItems.value = rawData.map(item => ({
+      ...item,
+      product_id: item.product_id || item.id 
+    })).reverse();
+    
+  } catch (error) {
+    console.error("Failed to load cart:", error);
+    if (error.response && error.response.status === 401) {
+       router.push('/login');
     }
-  },
-  mounted() {
-    this.fetchCart();
-  },
-  methods: {
-    async fetchCart() {
-      this.loading = true;
-      try {
-        const response = await api.get('/user/cart');
-        // Make sure API response structure matches { data: [...] }
-        this.cartItems = response.data.data; 
-      } catch (error) {
-        console.error("Failed to load cart:", error);
-        if (error.response && error.response.status === 401) {
-           this.$router.push('/login');
-        }
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async updateQuantity(product_id, newQty) {
-      if (newQty < 1) return;
-      try {
-        // Optimistic UI update
-        const item = this.cartItems.find(i => i.product_id === product_id); // Changed from i.id to i.product_id based on API
-        if (item) item.quantity = newQty;
-
-        await api.put(`/user/cart/${product_id}`, { quantity: newQty });
-        // Optionally fetchCart() again to ensure sync
-      } catch (error) {
-        alert("Failed to update quantity");
-        this.fetchCart(); // Revert on error
-      }
-    },
-
-    async removeItem(product_id) {
-      if (!confirm('Are you sure you want to remove this item?')) return;
-      
-      try {
-        await api.delete(`/user/cart/${product_id}`);
-        // Remove from local array immediately
-        this.cartItems = this.cartItems.filter(i => i.product_id !== product_id);
-      } catch (error) {
-        alert("Failed to remove item");
-      }
-    },
-
-    handleContinueShopping() {
-      this.$router.push('/shop');
-    },
-
-    proceedToCheckout() {
-      this.$router.push('/checkout');
-    },
-
-    navigateToProduct(item) {
-      this.$router.push(`/product/${item.product_id}`);
-    }
+  } finally {
+    loading.value = false;
   }
 };
+
+// 2. Update Quantity
+const updateQuantity = async (productId, newQty) => {
+  if (newQty < 1) return;
+  
+  const item = cartItems.value.find(i => i.product_id === productId);
+  if (!item) return;
+
+  const oldQty = item.quantity;
+  item.quantity = newQty; // Optimistic update
+
+  try {
+    await api.put(`/user/cart/${productId}`, { quantity: newQty });
+  } catch (error) {
+    console.error("Update qty error", error);
+    item.quantity = oldQty; // Revert
+    alert("Failed to update quantity");
+  }
+};
+
+// 3. Remove Item
+// FIX: Logic is now robust because template forces correct productId
+const removeItem = async (productId) => {
+  if (!productId) {
+    console.error("No product ID provided for removal");
+    return;
+  }
+
+  if (!confirm('Are you sure you want to remove this item?')) return;
+  
+  const originalItems = [...cartItems.value];
+  cartItems.value = cartItems.value.filter(i => i.product_id !== productId); // Optimistic UI update
+
+  try {
+    await api.delete(`/user/cart/${productId}`);
+  } catch (error) {
+    console.error("Remove error", error);
+    cartItems.value = originalItems; // Revert
+    alert("Failed to remove item");
+  }
+};
+
+// Note: moveToWishlist has been removed as requested.
+
+// --- Navigation ---
+const handleContinueShopping = () => {
+  router.push('/shop');
+};
+
+const proceedToCheckout = () => {
+  router.push('/checkout');
+};
+
+const navigateToProduct = (item) => {
+  const pid = item.product_id || item.id;
+  router.push(`/product/${pid}`);
+};
+
+// --- Lifecycle ---
+onMounted(() => {
+  fetchCart();
+});
 </script>
 
 <style scoped>
