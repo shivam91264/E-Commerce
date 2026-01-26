@@ -20,7 +20,7 @@ db.init_app(app)
 cache.init_app(app) 
 
 
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
 @app.route('/')
