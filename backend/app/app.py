@@ -54,7 +54,7 @@ def create_default_admin():
 
     if not admin_exists:
         admin = User(
-            email="admin@gmailcom",
+            email="admin@gmail.com",
             password_hash=generate_password_hash("admin"),
             first_name="Admin",
             last_name="User",
