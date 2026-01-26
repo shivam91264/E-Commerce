@@ -1,3 +1,7 @@
+from werkzeug.security import generate_password_hash
+from app.models.models import User
+
+
 from flask import Flask
 from app.models.models import db 
 from app.config.config import Config
@@ -45,6 +49,26 @@ app.register_blueprint(user_bp, url_prefix="/api")
 
 
 
+def create_default_admin():
+    admin_exists = User.query.filter_by(is_admin=True).first()
+
+    if not admin_exists:
+        admin = User(
+            email="admin@gmailcom",
+            password_hash=generate_password_hash("admin"),
+            first_name="Admin",
+            last_name="User",
+            is_admin=True,
+            is_active=True
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print("✅ Default admin created")
+    else:
+        print("ℹ️ Admin already exists")
+
+
 
 with app.app_context():
     db.create_all()
+    create_default_admin()
