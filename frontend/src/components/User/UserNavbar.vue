@@ -2,7 +2,11 @@
   <nav class="navbar navbar-expand-lg sticky-top bg-white premium-navbar" :class="{ 'scrolled': isScrolled }">
     <div class="container-fluid px-lg-5">
 
-      <button class="btn btn-link text-dark border-0 p-0 me-3 d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu">
+      <button 
+        class="btn btn-link text-dark border-0 p-0 me-3 d-lg-none" 
+        type="button" 
+        @click="toggleNav"
+      >
         <i class="bi bi-list fs-2"></i>
       </button>
 
@@ -10,28 +14,31 @@
         MARKETHUB<span class="text-primary">.</span>
       </router-link>
 
-      <div class="collapse navbar-collapse flex-grow-0 me-auto d-none d-lg-block">
+      <div 
+        class="collapse navbar-collapse flex-grow-0 me-auto"
+        :class="{ 'show': isNavOpen }"
+        id="userNav"
+      >
         <ul class="navbar-nav gap-4">
           
           <template v-if="userRole === 'admin'">
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/admin/dashboard">Dashboard</router-link></li>
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/admin/products">Products</router-link></li>
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/admin/orders">Orders</router-link></li>
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/admin/analytics">Analytics</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/admin/dashboard">Dashboard</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/admin/products">Products</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/admin/orders">Orders</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/admin/analytics">Analytics</router-link></li>
           </template>
 
           <template v-else>
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/">Home</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/">Home</router-link></li>
             
             <li class="nav-item dropdown">
               <a class="nav-link hover-underline d-flex align-items-center gap-1 dropdown-toggle" href="#" data-bs-toggle="dropdown">Shop</a>
               <ul class="dropdown-menu border-0 shadow-lg p-3 rounded-3 mt-2">
-                
                 <li v-if="categories.length === 0">
                   <span class="dropdown-item text-muted small">Loading categories...</span>
                 </li>
 
-                <li v-for="cat in categories" :key="cat.id">
+                <li v-for="cat in categories" :key="cat.id" @click="closeNav">
                   <router-link 
                     :to="{ path: '/shop', query: { category: cat.slug } }" 
                     class="dropdown-item py-2 rounded-2"
@@ -41,13 +48,13 @@
                 </li>
 
                 <li><hr class="dropdown-divider"></li>
-                <li><router-link class="dropdown-item fw-bold" to="/shop">View All</router-link></li>
+                <li @click="closeNav"><router-link class="dropdown-item fw-bold" to="/shop">View All</router-link></li>
               </ul>
             </li>
 
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/newarrivals">New Arrivals</router-link></li>
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/about">About</router-link></li>
-            <li class="nav-item"><router-link class="nav-link hover-underline" to="/contact">Contact</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/newarrivals">New Arrivals</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/about">About</router-link></li>
+            <li class="nav-item" @click="closeNav"><router-link class="nav-link hover-underline" to="/contact">Contact</router-link></li>
           </template>
 
         </ul>
@@ -74,24 +81,24 @@
           </a>
           <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 mt-3">
             <template v-if="!isAuthenticated">
-              <li><router-link class="dropdown-item" to="/login">Login</router-link></li>
-              <li><router-link class="dropdown-item" to="/register">Register</router-link></li>
+              <li @click="closeNav"><router-link class="dropdown-item" to="/login">Login</router-link></li>
+              <li @click="closeNav"><router-link class="dropdown-item" to="/register">Register</router-link></li>
             </template>
             <template v-else>
               <template v-if="userRole === 'admin'">
                  </template>
               <template v-else>
-                <li><router-link class="dropdown-item" to="/profile">My Profile</router-link></li>
-                <li><router-link class="dropdown-item" to="/order">My Orders</router-link></li>
-                <li><router-link class="dropdown-item" to="/wishlist">Wishlist</router-link></li>
+                <li @click="closeNav"><router-link class="dropdown-item" to="/profile">My Profile</router-link></li>
+                <li @click="closeNav"><router-link class="dropdown-item" to="/order">My Orders</router-link></li>
+                <li @click="closeNav"><router-link class="dropdown-item" to="/wishlist">Wishlist</router-link></li>
               </template>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" @click.prevent="$emit('logout')">Logout</a></li>
+              <li><a class="dropdown-item text-danger" href="#" @click.prevent="handleLogout">Logout</a></li>
             </template>
           </ul>
         </div>
 
-        <router-link v-if="userRole !== 'admin'" class="text-dark position-relative" to="/cart">
+        <router-link v-if="userRole !== 'admin'" class="text-dark position-relative" to="/cart" @click="closeNav">
           <i class="bi bi-bag fs-5"></i>
           <span v-if="cartItemCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark border border-white text-white" style="font-size: 0.65rem; padding: 0.35em 0.5em;">{{ cartItemCount }}</span>
         </router-link>
@@ -100,13 +107,20 @@
     </div>
   </nav>
 
-  </template>
+  <div v-if="showMobileSearch" class="container-fluid bg-white py-3 border-bottom position-absolute top-100 start-0 w-100 shadow-sm" style="z-index: 999;">
+      <form @submit.prevent="handleSearch">
+          <input type="text" class="form-control" placeholder="Search products..." v-model="searchQuery" autoFocus>
+      </form>
+  </div>
+</template>
 
 <script>
 import api from "@/services/api";
 
 export default {
   name: "UserNavbar",
+  // 3. FIX: Define emits to remove console warnings
+  emits: ['logout', 'search', 'filterCategory'],
   props: {
     isAuthenticated: { type: Boolean, default: false },
     cartItemCount: { type: Number, default: 0 },
@@ -117,25 +131,32 @@ export default {
       searchQuery: "",
       isScrolled: false,
       showMobileSearch: false,
-      // FIX 1: Removed hardcoded array. Initialize as empty.
-      categories: [] 
+      categories: [],
+      isNavOpen: false
     };
   },
   mounted() {
     window.addEventListener("scroll", this.handleScroll);
-    this.fetchCategories(); // FIX 2: Call the API method on load
+    this.fetchCategories();
   },
   beforeUnmount() {
     window.removeEventListener("scroll", this.handleScroll);
   },
   methods: {
-    // FIX 3: Added API call method
+    toggleNav() {
+      this.isNavOpen = !this.isNavOpen;
+    },
+    closeNav() {
+      this.isNavOpen = false;
+    },
+    handleLogout() {
+        this.closeNav();
+        this.$emit('logout');
+    },
     async fetchCategories() {
       try {
-        // Calls your Flask API: @user_bp.route('/categories')
         const response = await api.get('/categories');
         this.categories = response.data.data;
-        console.log("Categories loaded:", this.categories);
       } catch (error) {
         console.error("Failed to load categories:", error);
       }
@@ -144,6 +165,7 @@ export default {
       if (this.searchQuery.trim()) {
         this.$emit("search", this.searchQuery);
         this.showMobileSearch = false;
+        this.closeNav(); 
         this.$router.push({ path: '/shop', query: { search: this.searchQuery } });
       }
     },
@@ -152,14 +174,13 @@ export default {
     },
     toggleMobileSearch() {
       this.showMobileSearch = !this.showMobileSearch;
+      if(this.showMobileSearch) this.closeNav();
     }
-    // ... closeOffcanvas logic
   }
 };
 </script>
 
 <style scoped>
-/* Keep your existing styles */
 .premium-navbar { transition: all 0.3s ease; padding: 1.25rem 0; }
 .premium-navbar.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 0.75rem 0; }
 .nav-link { font-size: 0.9rem; font-weight: 500; text-transform: uppercase; color: #555; }
@@ -169,4 +190,24 @@ export default {
 .hover-underline:hover::after { transform: scaleX(1); }
 .form-control.bg-light { background-color: #f3f4f6 !important; }
 .form-control:focus { background-color: #fff !important; border-color: #000 !important; box-shadow: none; }
+
+/* 4. FIX: Handle Mobile Menu Visibility cleanly */
+@media (max-width: 991px) {
+  .navbar-collapse {
+    /* Standard bootstrap collapse is display:none. We override only when .show is present */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    padding: 1rem;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+    z-index: 1000;
+  }
+  
+  /* Force display block when Vue adds the 'show' class */
+  .navbar-collapse.show {
+    display: block !important;
+  }
+}
 </style>
