@@ -238,7 +238,7 @@ export default {
   },
   methods: {
     handleNavigation(page) {
-      console.log(`Navigating to: ${page}`);
+      console.log(`Navigating to: Rs.{page}`);
       // In real app: this.$router.push({ name: page });
     },
     handleLogout() {
@@ -246,14 +246,14 @@ export default {
       alert("Logged out successfully");
     },
     handleSearch(query) {
-      console.log(`Search: ${query}`);
+      console.log(`Search: Rs.{query}`);
     },
     handleCategory(id) {
-      console.log(`Filtering Category ID: ${id}`);
+      console.log(`Filtering Category ID: Rs.{id}`);
     },
     addToCart(product) {
       this.cartCount++;
-      alert(`Added ${product.name} to cart.`);
+      alert(`Added Rs.{product.name} to cart.`);
     }
   }
 };
