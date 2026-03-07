@@ -83,7 +83,7 @@
                   <img :src="product.image" class="w-100 h-100 object-fit-cover transition-scale" :alt="product.name">
                   <div class="action-overlay position-absolute bottom-0 w-100 p-3">
                     <button class="btn btn-white w-100 rounded-pill fw-bold shadow-sm" @click="addToCart(product)">
-                      Quick Add - Rs.{{ product.price }}
+                      Quick Add - Rs. {{ product.price }}
                     </button>
                   </div>
                 </div>
@@ -104,7 +104,7 @@
               <div class="py-3">
                 <i class="bi bi-box-seam fs-1 text-dark mb-3 d-block"></i>
                 <h6 class="fw-bold mb-1">Free Shipping</h6>
-                <p class="text-muted extra-small mb-0">On orders over Rs.150</p>
+                <p class="text-muted extra-small mb-0">On orders over Rs. 150</p>
               </div>
             </div>
             <div class="col-6 col-md-3">
@@ -167,7 +167,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                   <div>
                     <h6 class="fw-bold mb-1">{{ item.name }}</h6>
-                    <span class="text-muted">Rs.{{ item.price }}</span>
+                    <span class="text-muted">Rs. {{ item.price }}</span>
                   </div>
                   <button class="btn btn-outline-dark btn-sm rounded-circle p-2 lh-1" @click="addToCart(item)">
                     <i class="bi bi-plus-lg"></i>
