@@ -82,7 +82,7 @@
                 
                 <div class="d-flex align-items-center gap-3 mt-3">
                   <h3 class="fw-bold mb-0">Rs. {{ product.originalPrice || product.price }}</h3>
-                  <span v-if="product.originalPrice" class="text-muted text-decoration-line-through fs-5">${{ product.price }}</span>
+                  <span v-if="product.originalPrice" class="text-muted text-decoration-line-through fs-5">Rs. {{ product.price }}</span>
                   <span v-if="product.originalPrice" class="badge bg-danger rounded-pill px-3">-{{ discountPercentage }}%</span>
                 </div>
 
