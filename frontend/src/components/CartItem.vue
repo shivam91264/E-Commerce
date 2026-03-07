@@ -32,8 +32,8 @@
           </div>
 
           <div class="text-end" style="min-width: 80px;">
-            <span class="d-block fw-bold">${{ (item.price * item.quantity).toFixed(2) }}</span>
-            <span class="d-block text-muted extra-small" v-if="item.quantity > 1">${{ item.price }} each</span>
+            <span class="d-block fw-bold">Rs. {{ (item.price * item.quantity).toFixed(2) }}</span>
+            <span class="d-block text-muted extra-small" v-if="item.quantity > 1">Rs. {{ item.price }} each</span>
           </div>
         </div>
       </div>

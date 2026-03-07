@@ -32,7 +32,7 @@
 
       <div class="d-flex justify-content-between mb-2 small">
         <span class="text-muted">Subtotal</span>
-        <span class="fw-bold">${{ subtotal.toFixed(2) }}</span>
+        <span class="fw-bold">Rs. {{ subtotal.toFixed(2) }}</span>
       </div>
       <div class="d-flex justify-content-between mb-2 small">
         <span class="text-muted">Shipping</span>
@@ -42,7 +42,7 @@
       </div>
       <div class="d-flex justify-content-between mb-4 small">
         <span class="text-muted">Taxes</span>
-        <span class="fw-bold">$0.00</span>
+        <span class="fw-bold">Rs. 0.00</span>
       </div>
 
       <hr class="border-secondary opacity-10">
@@ -51,7 +51,7 @@
         <span class="fs-5 fw-bold">Total</span>
         <div>
           <span class="text-muted extra-small me-2">USD</span>
-          <span class="fs-4 fw-bold">${{ total.toFixed(2) }}</span>
+          <span class="fs-4 fw-bold">Rs. {{ total.toFixed(2) }}</span>
         </div>
       </div>
 

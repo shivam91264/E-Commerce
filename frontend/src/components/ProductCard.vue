@@ -45,7 +45,7 @@
         <h6 class="card-title fw-semibold mb-0 text-truncate text-dark" style="max-width: 70%;" :title="product.name">
           {{ product.name }}
         </h6>
-        <span class="fw-bold small text-dark">${{ product.price }}</span>
+        <span class="fw-bold small text-dark">Rs. {{ product.price }}</span>
       </div>
 
       <p class="text-muted small mb-2 text-truncate">{{ product.subtitle || product.category }}</p>
