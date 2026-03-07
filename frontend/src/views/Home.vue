@@ -222,17 +222,17 @@ export default {
       ],
       
       trendingProducts: [
-        { id: 101, name: "Ethnic Sets", category: "women", price: 89, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/c92f4ef4638807bf.jpg?q=60" },
-        { id: 102, name: "Patola Sarees", category: "women", price: 159, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/ec76199c02b93fea.jpg?q=60" },
-        { id: 104, name: "Summer Stripe", category: "men", price: 45, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/749ee79b05acd16b.jpg?q=60" },
-        { id: 103, name: "Slim Jeans", category: "men", price: 210, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/4ac84dba226c36a2.jpg?q=60" }
+        { id: 101, name: "Ethnic Sets", category: "women", price: 399, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/c92f4ef4638807bf.jpg?q=60" },
+        { id: 102, name: "Patola Sarees", category: "women", price: 459, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/ec76199c02b93fea.jpg?q=60" },
+        { id: 104, name: "Summer Stripe", category: "men", price: 399, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/749ee79b05acd16b.jpg?q=60" },
+        { id: 103, name: "Slim Jeans", category: "men", price: 499, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/4ac84dba226c36a2.jpg?q=60" }
       ],
       
       bestSellers: [
-        { id: 201, name: "Pastel organza sarees", price: 299, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/d1f2b595e7f4917c.jpg?q=60" },
+        { id: 201, name: "Pastel organza sarees", price: 399, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/d1f2b595e7f4917c.jpg?q=60" },
         { id: 202, name: "Tiered anarkalis", price: 349, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/e75ba87c70d623a5.jpg?q=60" },
-        { id: 203, name: "Textured shirts", price: 199, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/0a537c0f30f477fc.jpg?q=60" },
-        { id: 204, name: "Baggy jeans", price: 129, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/3f372f348d91b963.jpg?q=60" }
+        { id: 203, name: "Textured shirts", price: 349, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/0a537c0f30f477fc.jpg?q=60" },
+        { id: 204, name: "Baggy jeans", price: 399, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/3f372f348d91b963.jpg?q=60" }
       ]
     };
   },
