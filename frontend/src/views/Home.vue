@@ -215,24 +215,24 @@ export default {
       
       // Mock Data
       categories: [
-        { id: 1, name: "Workspace", count: 24, image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 2, name: "Audio", count: 12, image: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 3, name: "Travel", count: 18, image: "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 4, name: "Living", count: 32, image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" }
+        { id: 1, name: "Men", count: 24, image: "https://rukminim2.flixcart.com/fk-p-flap/760/820/image/1fc694109f9738ee.jpg?q=60" },
+        { id: 2, name: "Women", count: 12, image: "https://rukminim2.flixcart.com/fk-p-flap/760/820/image/dc9601e6c2e53b10.jpg?q=60" },
+        { id: 3, name: "Gen Z", count: 18, image: "https://rukminim2.flixcart.com/fk-p-flap/760/820/image/fd88a659bd7299c4.jpg?q=60" },
+        { id: 4, name: "Kids", count: 32, image: "https://rukminim2.flixcart.com/fk-p-flap/760/820/image/7e0de62c0e59e4ab.jpg?q=60" }
       ],
       
       trendingProducts: [
-        { id: 101, name: "Minimal Desk Lamp", category: "Lighting", price: 89, tag: "New", image: "https://images.unsplash.com/photo-1507473888900-52e1ad145986?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 102, name: "Mechanical Keyboard", category: "Tech", price: 159, tag: "", image: "https://images.unsplash.com/photo-1587829741301-dc798b91add4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 103, name: "Leather Tote", category: "Accessories", price: 210, tag: "Hot", image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 104, name: "Ceramic Vase", category: "Decor", price: 45, tag: "", image: "https://images.unsplash.com/photo-1612196808214-b7e239e5f6b7?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" }
+        { id: 101, name: "Ethnic Sets", category: "women", price: 89, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/c92f4ef4638807bf.jpg?q=60" },
+        { id: 102, name: "Patola Sarees", category: "women", price: 159, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/ec76199c02b93fea.jpg?q=60" },
+        { id: 104, name: "Summer Stripe", category: "men", price: 45, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/749ee79b05acd16b.jpg?q=60" },
+        { id: 103, name: "Slim Jeans", category: "men", price: 210, tag: "New", image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/4ac84dba226c36a2.jpg?q=60" }
       ],
       
       bestSellers: [
-        { id: 201, name: "Analog Watch", price: 299, image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 202, name: "Noise Cancelling Headphones", price: 349, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 203, name: "Modern Chair", price: 199, image: "https://images.unsplash.com/photo-1592078615290-033ee584e267?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
-        { id: 204, name: "Smart Speaker", price: 129, image: "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" }
+        { id: 201, name: "Pastel organza sarees", price: 299, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/d1f2b595e7f4917c.jpg?q=60" },
+        { id: 202, name: "Tiered anarkalis", price: 349, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/e75ba87c70d623a5.jpg?q=60" },
+        { id: 203, name: "Textured shirts", price: 199, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/0a537c0f30f477fc.jpg?q=60" },
+        { id: 204, name: "Baggy jeans", price: 129, image: "https://rukminim2.flixcart.com/fk-p-flap/700/920/image/3f372f348d91b963.jpg?q=60" }
       ]
     };
   },
