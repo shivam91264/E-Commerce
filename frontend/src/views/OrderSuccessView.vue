@@ -83,7 +83,7 @@
                       <h6 class="mb-0 small fw-bold text-truncate" style="max-width: 200px;">{{ item.name }}</h6>
                       <span class="text-muted extra-small">{{ item.variant }}</span>
                     </div>
-                    <span class="small fw-bold">${{ (item.price * item.quantity).toFixed(2) }}</span>
+                    <span class="small fw-bold">Rs. {{ (item.price * item.quantity).toFixed(2) }}</span>
                   </div>
                 </div>
 
@@ -107,7 +107,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary border-opacity-10">
                       <span class="fw-bold small">Total Paid</span>
-                      <span class="fw-bold fs-5">${{ order.total.toFixed(2) }}</span>
+                      <span class="fw-bold fs-5">Rs. {{ order.total.toFixed(2) }}</span>
                     </div>
                   </div>
                 </div>

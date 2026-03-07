@@ -83,14 +83,14 @@
               </div>
               <div class="d-flex justify-content-between mb-4">
                 <span class="text-muted small">Tax Estimate</span>
-                <span class="fw-medium">$0.00</span>
+                <span class="fw-medium">Rs. 0.00</span>
               </div>
 
               <hr class="border-secondary opacity-10 my-4">
 
               <div class="d-flex justify-content-between mb-4">
                 <span class="fw-bold fs-5">Total</span>
-                <span class="fw-bold fs-5">${{ subtotal.toFixed(2) }}</span>
+                <span class="fw-bold fs-5">Rs. {{ subtotal.toFixed(2) }}</span>
               </div>
 
               <div class="d-grid gap-3">
@@ -121,7 +121,7 @@
     <div class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up" v-if="cartItems.length > 0">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="small text-muted">Total</span>
-        <span class="fw-bold fs-5">${{ subtotal.toFixed(2) }}</span>
+        <span class="fw-bold fs-5">Rs. {{ subtotal.toFixed(2) }}</span>
       </div>
       <button class="btn btn-dark w-100 py-3 rounded-pill text-uppercase fw-bold tracking-wide" @click="proceedToCheckout">
         Checkout

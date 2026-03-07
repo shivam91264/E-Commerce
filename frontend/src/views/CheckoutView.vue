@@ -68,7 +68,7 @@
                       <span class="d-block fw-bold text-dark">Express Shipping</span>
                       <span class="d-block extra-small text-muted">Estimated: 2-3 Business Days</span>
                     </span>
-                    <span class="fw-bold">$15.00</span>
+                    <span class="fw-bold">Rs. 499</span>
                   </label>
                 </div>
               </div>
@@ -116,7 +116,7 @@
     <div class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up z-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="text-muted small">Total to pay</span>
-        <span class="fw-bold fs-5">${{ grandTotal.toFixed(2) }}</span>
+        <span class="fw-bold fs-5">Rs. {{ grandTotal.toFixed(2) }}</span>
       </div>
       <button 
         class="btn btn-dark w-100 py-3 rounded-pill text-uppercase fw-bold tracking-wide" 

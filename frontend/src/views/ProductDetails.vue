@@ -81,7 +81,7 @@
                 <p class="text-muted lead fs-6">{{ product.tagline }}</p>
                 
                 <div class="d-flex align-items-center gap-3 mt-3">
-                  <h3 class="fw-bold mb-0">${{ product.originalPrice || product.price }}</h3>
+                  <h3 class="fw-bold mb-0">Rs. {{ product.originalPrice || product.price }}</h3>
                   <span v-if="product.originalPrice" class="text-muted text-decoration-line-through fs-5">${{ product.price }}</span>
                   <span v-if="product.originalPrice" class="badge bg-danger rounded-pill px-3">-{{ discountPercentage }}%</span>
                 </div>
@@ -136,7 +136,7 @@
                     <i class="bi bi-truck fs-4 text-muted"></i>
                     <div class="text-center text-sm-start">
                       <span class="d-block fw-bold small">Free Shipping</span>
-                      <span class="d-block text-muted extra-small">On orders over $150</span>
+                      <span class="d-block text-muted extra-small">On orders over Rs. 150</span>
                     </div>
                   </div>
                 </div>
@@ -235,7 +235,7 @@
     <div v-if="product" class="d-lg-none fixed-bottom bg-white border-top shadow-lg p-3 animate-slide-up" style="z-index: 10;">
       <div class="d-flex gap-2">
         <div class="d-flex flex-column justify-content-center">
-          <span class="fw-bold small">${{ product.originalPrice || product.price }}</span>
+          <span class="fw-bold small">Rs. {{ product.originalPrice || product.price }}</span>
           <span class="text-muted extra-small text-uppercase">Free Shipping</span>
         </div>
         <button class="btn btn-dark w-100 rounded-pill fw-bold text-uppercase" @click="addToCart">Add to Cart</button>

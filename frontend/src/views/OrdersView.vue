@@ -64,7 +64,7 @@
                   </div>
                   <div class="col-6 col-md-2">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Total</span>
-                    <span class="fw-bold text-dark small">${{ order.displayTotal }}</span>
+                    <span class="fw-bold text-dark small">Rs. {{ order.displayTotal }}</span>
                   </div>
                   <div class="col-6 col-md-3">
                     <span class="d-block text-muted extra-small text-uppercase tracking-wide fw-bold mb-1">Order #</span>

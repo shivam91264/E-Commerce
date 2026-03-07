@@ -68,7 +68,7 @@
                         <span class="text-warning small"><i class="bi bi-star-fill"></i> {{ product.rating }}</span>
                         <span class="text-muted small ms-1">({{ product.reviews }} reviews)</span>
                       </div>
-                      <div class="h5 fw-bold mb-3">${{ product.price }}</div>
+                      <div class="h5 fw-bold mb-3">Rs. {{ product.price }}</div>
                       
                       <button class="btn btn-dark w-100 rounded-pill py-2 text-uppercase extra-small fw-bold tracking-wide hover-lift">
                         View Details
